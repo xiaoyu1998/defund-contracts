@@ -7,7 +7,7 @@ import './NoDelegateCall.sol';
 
 /// @title Canonical factory
 /// @notice Deploys pools and manages ownership and control over pool protocol fees
-contract Factory is Deployer, NoDelegateCall {
+contract Factory is NoDelegateCall {
     address public override owner;
 
     address public immutable dataStore;

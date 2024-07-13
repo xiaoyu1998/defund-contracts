@@ -24,18 +24,27 @@ contract DefundPool is NoDelegateCall, PayableMulticall {
         _;
     }
 
-    constructor() {
-        (   factory,
-            owner, 
-            healthThrehold, 
-            fee,
-            shareToken,
-            router,
-            exchangeRouter,
-            reader,
-            dataStore,   
-            underlyAssetUsd      
-         ) = IDeployer(msg.sender).parameters();
+    constructor(
+        address _factory,
+        address _owner,
+        uint24 _healthFactor,
+        uint24 _fee,
+        address _dataStore,
+        address _reader,
+        address _router, 
+        address _exchangeRouter, 
+        address _underlyAssetUsd          
+    ) {
+        factory = factory; 
+        owner = owner; 
+        fee = fee;
+        healthThrehold = healthThrehold; 
+        dataStore = dataStore;
+        reader = reader;
+        router = router; 
+        exchangeRouter = exchangeRouter; 
+        underlyAssetUsd = underlyAssetUsd;
+
     }
 
     //user 
