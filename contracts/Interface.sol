@@ -38,6 +38,12 @@ struct CloseParams {
 }
 
 interface IExchangeRouter {
+    function sendTokens(
+        address token, 
+        address receiver, 
+        uint256 amount
+    ) external;
+
     function executeDeposit(
         DepositParams calldata params
     ) external payable;
@@ -81,4 +87,20 @@ interface IReader {
         address dataStore, 
         address account
     ) external view returns (GetLiquidationHealthFactor memory);
+
+    function getPoolToken(
+        address dataStore, 
+        address underlyingAsset
+    ) external view returns (address);
+}
+
+interface IShareToken {
+    function mint(address account, uint256 amount) external;
+    function burn(address account, uint256 amount) external;
+    function totalSupply() external view returns(uint256);
+}
+
+
+interface IPoolToken {
+    function balanceOfCollateral (address account) external view returns (uint256);
 }
