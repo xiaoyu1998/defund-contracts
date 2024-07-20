@@ -74,6 +74,11 @@ interface IExchangeRouter {
     
 }
 
+struct Position {
+    uint256 entryPrice;
+    uint256 accAmount;
+}
+
 struct GetLiquidationHealthFactor {
     uint256 healthFactor;
     uint256 healthFactorLiquidationThreshold;

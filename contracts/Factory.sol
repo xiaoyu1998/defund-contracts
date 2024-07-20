@@ -15,8 +15,7 @@ contract Factory is NoDelegateCall {
     );
     event PoolCreated(
         address indexed owner,
-        uint24 healthThrehold,
-        uint24  fee,
+        address fundStrategy,
         address pool
     );
 
@@ -29,7 +28,7 @@ contract Factory is NoDelegateCall {
     address public immutable underlyAssetUsd;
     uint256 public immutable decimalsUsd;
 
-    mapping(address => mapping(uint24 => mapping(uint24 => address))) public getPool;
+    mapping(address => mapping(address => address)) public getPool;
 
     constructor(
         address _dataStore,
@@ -50,28 +49,26 @@ contract Factory is NoDelegateCall {
     }
 
     function createPool(
-        uint24 healthThrehold,
-        uint24 fee
+        address fundStrategy
     ) external noDelegateCall returns (address) {
-        require(getPool[msg.sender][healthThrehold][fee] == address(0));
+        require(getPool[msg.sender][fundStrategy] == address(0));
 
         ShareToken shareToken = new ShareToken();
         Pool pool = new Pool(
             address(this), 
             msg.sender, 
-            fee,
-            healthThrehold, 
             address(shareToken),
             dataStore,
             reader,
             router,
             exchangeRouter,
             underlyAssetUsd,
-            decimalsUsd
+            decimalsUsd,
+            fundStrategy
         );
         shareToken.transferOwnership(address(pool));
-        getPool[msg.sender][healthThrehold][fee] = address(pool);
-        emit PoolCreated(msg.sender, healthThrehold, fee,  address(pool));
+        getPool[msg.sender][fundStrategy] = address(pool);
+        emit PoolCreated(msg.sender, address(pool), fundStrategy );
 
         return address(pool);
     }

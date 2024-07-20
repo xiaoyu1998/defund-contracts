@@ -73,3 +73,7 @@ export function getToken(name) {
     }
     return {}[name];
 }
+
+export function expandDecimals(n, decimals) {
+    return BigInt(n)*(BigInt(10)**BigInt(decimals));
+}

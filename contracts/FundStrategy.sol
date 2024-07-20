@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
+pragma solidity ^0.8.24;
 
-pragma solidity ^0.8.20;
-import "../utils/PercentageMath.sol";
-import "../utils/WadRayMath.sol";
-
+import "./utils/PercentageMath.sol";
+import "./utils/WadRayMath.sol";
 import "./IFundStrategy.sol";
 //import "../utils/Printer.sol";
 
 contract FundStrategy is IFundStrategy {
     using PercentageMath for uint256;
+    using WadRayMath for uint256;
 
-
+    uint256 internal immutable _healthThreshold;
     uint256 internal immutable startTimestamp;
     uint256 internal immutable subscriptionPeriod;
     uint256 internal immutable firstSubscriptionFeeRate;
@@ -18,6 +18,7 @@ contract FundStrategy is IFundStrategy {
     uint256 internal immutable redemptionFeeRate;
 
     constructor(
+        uint256 healthThreshold_,
         uint256 _subscriptionPeriod,
         uint256 _firstSubscriptionFeeRate,
         uint256 _redemptionFeeThreshold,
@@ -28,11 +29,17 @@ contract FundStrategy is IFundStrategy {
         firstSubscriptionFeeRate = _firstSubscriptionFeeRate;
         redemptionFeeThreshold = _redemptionFeeThreshold;
         redemptionFeeRate = _redemptionFeeRate;
+        _healthThreshold = healthThreshold_;
+    }
+
+    /// @inheritdoc IFundStrategy
+    function healthThreshold() public view  override returns (uint256) {
+        return _healthThreshold;
     }
 
     /// @inheritdoc IFundStrategy
     function isSubscriptionPeriod() public view  override returns (bool) {
-        return block.timestamp - startTimestamp > subscriptionPeriod;
+        return block.timestamp - startTimestamp < subscriptionPeriod;
     }
     
     /// @inheritdoc IFundStrategy
@@ -43,14 +50,14 @@ contract FundStrategy is IFundStrategy {
     /// @inheritdoc IFundStrategy
     function redemptionFee(
         uint256 amount,
-        uint256 shareAmount,
+        uint256 entryPrice,
         uint256 netCollateralUsd,
         uint256 totalShares        
     ) public view  override returns (uint256) {
 
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-        if (sharePrice > redemptionFeeThreshold){
-            return amount.percentMul(returnredemptionFeeRate);
+        if (sharePrice - entryPrice > redemptionFeeThreshold){
+            return amount.percentMul(redemptionFeeRate);
         }else{
             return 0;
         }

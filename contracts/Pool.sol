@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity =0.8.24;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./NoDelegateCall.sol";
+import "./IFundStrategy.sol";
 import "./Interface.sol";
 import "./utils/PayableMulticall.sol";
 import "./utils/WadRayMath.sol";
 import "./utils/StrictBank.sol";
 
-
 contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
+    using WadRayMath for uint256;
     address public immutable factory;
     address public immutable owner;
     uint24 public immutable fee;
@@ -30,6 +31,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
     uint256 internal unclaimFee;
     uint256 internal totalFundFee;
 
+    mapping(address => Position) public Positions;//TODO:should update after transfer
+
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
@@ -38,8 +41,6 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
     constructor(
         address _factory,
         address _owner,
-        // uint24 _fee,
-        // uint24 _healthThrehold,
         address _shareToken,
         address _dataStore,
         address _reader,
@@ -61,6 +62,24 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         underlyingAssetUsd = _underlyingAssetUsd;
         decimalsUsd = _decimalsUsd;
         fundStrategy = _fundStrategy;
+    }
+
+    function updatePosition(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
+        Position memory position = Positions[account];
+        if(position.sharePrice == 0){
+           position.entryPrice = sharePrice;
+           position.accAmount = amount;
+        } else {
+            if (isInvest){
+                uint256 totalValue = position.entryPrice.rayMul(position.accAmount) +
+                                     sharePrice.rayMul(amount);
+                position.accAmount += amount;
+                position.entryPrice = totalValue.rayDiv(position.accAmount);
+            } else {
+                position.accAmount -= amount;
+            }
+        }
+        Positions[account] = position;
     }
 
     function getEquity() internal returns(uint256, uint256) {
@@ -85,14 +104,18 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         depositAmount -= firstSubscriptionFee;
 
         uint256 sharesToMint;
-        if (IFundStrategy(fundStrategy).isSubscriptionPeriod(depositAmount)){
-            sharesToMint = depositAmount  
+        uint256 sharePrice;
+        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
+            sharePrice = WadRayMath.RAY;
+            sharesToMint = depositAmount ;
         } else {
             (   uint256 netCollateralUsd,
                 uint256 totalShares
             ) = getEquity();
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
+            sharePrice = netCollateralUsd.rayDiv(totalShares);
         }
+        updatePosition(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
         IERC20(underlyingAssetUsd).approve(router, depositAmount);
@@ -103,8 +126,13 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function withdraw(uint256 shareAmount, address to) external {
         //validate pending
-        if (IFundStrategy(fundStrategy).isSubscriptionPeriod(depositAmount)){
-            revert Errors.SubscriptionPeriodCanNotWithdraw()
+        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
+            revert Errors.SubscriptionPeriodCanNotWithdraw();
+        }
+
+        Position memory position = Positions[account];
+        if(position.sharePrice == 0){
+            revert Errors.EmptyShares(msg.sender);
         }
 
         //withdraw or redeem collateral withdraw
@@ -113,8 +141,9 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         ) = getEquity();
         uint256 amountToWithdrawUsd = Math.mulDiv(shareAmount, netCollateralUsd, totalShares);
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
+        // int256 profitPrice = sharePrice - Positions[msg.sender].entryPrice;
 
-        uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(amountToWithdrawUsd, shareAmount, netCollateralUsd, totalShares);
+        uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(amountToWithdrawUsd, Positions[msg.sender].entryPrice, netCollateralUsd, totalShares);
         unclaimFee += redemptionFee;
         totalFundFee += redemptionFee;
         amountToWithdrawUsd -= redemptionFee;
@@ -141,6 +170,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         
         //mint share token
         if (!pending) {
+            updatePosition(msg.sender, sharePrice, shareAmount,false);
             IShareToken(shareToken).burn(msg.sender, shareAmount);
         }
     }
@@ -149,56 +179,62 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
     function deposit(
         DepositParams calldata params
     ) external onlyOwner {
-       _deposit(params);
+        _deposit(params);
     }
 
     function _deposit(
         DepositParams memory params
     ) internal {
-       IExchangeRouter(exchangeRouter).executeDeposit(params);
+        IExchangeRouter(exchangeRouter).executeDeposit(params);
     }
 
     function borrow(
         BorrowParams calldata params
     ) external onlyOwner {
-       IExchangeRouter(exchangeRouter).executeBorrow(params);
+        GetLiquidationHealthFactor memory factor
+            = IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
+        uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
+        if(factor.healthFactor < fundHealthThreshold) {
+            revert Errors.BelowFundHealthThrehold(factor.healthFactor, fundHealthThreshold);
+        }
+        IExchangeRouter(exchangeRouter).executeBorrow(params);
     }
 
     function repay(
         RepayParams calldata params
     ) external onlyOwner {
-       IExchangeRouter(exchangeRouter).executeRepay(params);
+        IExchangeRouter(exchangeRouter).executeRepay(params);
     }
 
     function redeem(
         RedeemParams calldata params
     ) external onlyOwner {
-       //IExchangeRouter(exchangeRouter).executeRedeem(params);
-       _redeem(params);
+        //IExchangeRouter(exchangeRouter).executeRedeem(params);
+        _redeem(params);
     }
 
     function _redeem(
         RedeemParams memory params
     ) internal {
-       IExchangeRouter(exchangeRouter).executeRedeem(params);
+        IExchangeRouter(exchangeRouter).executeRedeem(params);
     }
 
     function swap(
         SwapParams calldata params
     ) external onlyOwner {
-       IExchangeRouter(exchangeRouter).executeSwap(params);
+        IExchangeRouter(exchangeRouter).executeSwap(params);
     }
 
     function closePosition(
         ClosePositionParams calldata params
     ) external onlyOwner {
-       IExchangeRouter(exchangeRouter).executeClosePosition(params);
+        IExchangeRouter(exchangeRouter).executeClosePosition(params);
     }
 
     function close(
         CloseParams calldata params
     ) external onlyOwner {
-       IExchangeRouter(exchangeRouter).executeClose(params);
+        IExchangeRouter(exchangeRouter).executeClose(params);
     }
 
 }

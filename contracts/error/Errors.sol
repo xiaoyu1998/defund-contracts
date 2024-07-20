@@ -12,5 +12,7 @@ library Errors {
 
     //Pool
     error SubscriptionPeriodCanNotWithdraw();
+    error BelowFundHealthThrehold(uint256 healthFactor, uint256 fundHealthThreshold);
+    error EmptyShares(address account);
 
 }

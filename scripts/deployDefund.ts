@@ -1,4 +1,4 @@
-import { sendTxn, deployContract, getContractAddress, setContractAddress, getToken} from "../utils/helper";
+import { sendTxn, deployContract, getContractAddress, setContractAddress, getToken, expandDecimals} from "../utils/helper";
 
 async function main() {
     const [owner] = await ethers.getSigners();
@@ -10,6 +10,16 @@ async function main() {
     const usdt = getToken("USDT")["address"];
     const usdtDecimals = getToken("USDT")["decimals"];
 
+
+    const fundStrategy = await deployContract("FundStrategy", [
+      expandDecimals(300, 25), //300%
+      24*60*60, //a day
+      100, //5/1000
+      expandDecimals(200, 25), //200%
+      expandDecimals(20, 25)//20%
+    ]);
+
+
     const factory = await deployContract("Factory", [
       dataStore, 
       reader,
@@ -20,8 +30,8 @@ async function main() {
     ]);
 
     await sendTxn(
-        factory.createPool(150, 300),
-        "factory.createPool(150, 300)"
+        factory.createPool(fundStrategy),
+        "factory.createPool(`?{fundStrategy.target}`)"
     );
     setContractAddress("DefundFactory", factory.target);
 
