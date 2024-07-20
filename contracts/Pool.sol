@@ -64,6 +64,20 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         fundStrategy = _fundStrategy;
     }
 
+    function shareTransfer(address from, address to, uint256 amount) internal {
+        Position memory positionFrom = Positions[from];
+        if(positionFrom.sharePrice == 0){
+            revert Errors.EmptyShares(from);
+        }
+        (   uint256 netCollateralUsd,
+            uint256 totalShares
+        ) = getEquity();
+        uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
+
+        updatePosition(from, sharePrice, amount, false);
+        updatePosition(to, sharePrice, amount, true);
+    }
+
     function updatePosition(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
         Position memory position = Positions[account];
         if(position.sharePrice == 0){
