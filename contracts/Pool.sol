@@ -64,7 +64,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function updatePositionForShareTransfer(address from, address to, uint256 amount) internal {
         Position memory positionFrom = Positions[from];
-        if(positionFrom.sharePrice == 0){
+        if(positionFrom.entryPrice == 0){
             revert Errors.EmptyShares(from);
         }
         (   uint256 netCollateralUsd,
@@ -78,7 +78,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function updatePosition(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
         Position memory position = Positions[account];
-        if(position.sharePrice == 0){
+        if(position.entryPrice == 0){
            position.entryPrice = sharePrice;
            position.accAmount = amount;
         } else {
@@ -142,8 +142,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
             revert Errors.SubscriptionPeriodCanNotWithdraw();
         }
 
-        Position memory position = Positions[account];
-        if(position.sharePrice == 0){
+        Position memory position = Positions[msg.sender];
+        if(position.entryPrice == 0){
             revert Errors.EmptyShares(msg.sender);
         }
 
