@@ -31,7 +31,7 @@ async function main() {
 
     await sendTxn(
         factory.createPool(fundStrategy),
-        "factory.createPool(`?{fundStrategy.target}`)"
+        `factory.createPool(${fundStrategy.target})`
     );
     setContractAddress("DefundFactory", factory.target);
 

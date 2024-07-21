@@ -45,5 +45,5 @@
   "WithdrawHandler#WithdrawHandler": "0x1c9788c5BB16EC5E449878fAe761206dfc3A6fEC",
   "CloseHandler#CloseHandler": "0xB5a59366FA918C970BCC8af9870Df02Df90BE2B3",
   "ExchangeRouter#ExchangeRouter": "0x607df899C9B3A9A5D464f6FeE01139cB8EDBe5a6",
-  "DefundFactory#DefundFactory": "0x60A95620350e3B55F271b0f727136a6c46A59868"
+  "DefundFactory#DefundFactory": "0x575BfF9CabfFdc94FC8EE52D7f7D3eb452B83fB8"
 }
