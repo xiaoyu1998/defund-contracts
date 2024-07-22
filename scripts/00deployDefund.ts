@@ -13,20 +13,20 @@ async function main() {
 
     const fundStrategy = await deployContract("FundStrategy", [
       expandDecimals(300, 25), //300%
-      24*60*60, //a day
-      100, //5/1000
-      expandDecimals(200, 25), //200%
-      expandDecimals(20, 25)//20%
+        24*60*60, //a day
+        100, //5/1000
+        expandDecimals(200, 25), //200%
+        expandDecimals(20, 25)//20%
     ]);
 
 
     const factory = await deployContract("Factory", [
-      dataStore, 
-      reader,
-      router,
-      exchangeRouter, 
-      usdt, 
-      usdtDecimals
+        dataStore, 
+        reader,
+        router,
+        exchangeRouter, 
+        usdt, 
+        usdtDecimals
     ]);
 
     await sendTxn(
@@ -34,6 +34,7 @@ async function main() {
         `factory.createPool(${fundStrategy.target})`
     );
     setContractAddress("DefundFactory", factory.target);
+    setContractAddress("Pool", await factory.getPool(owner.address, fundStrategy.target));
 
 }
 

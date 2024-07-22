@@ -1,5 +1,7 @@
 import hre from "hardhat";
-import Errors from "../abis/Errors.json";
+import Errors from "../artifacts/contracts/error/Errors.sol/Errors.json";
+// import Errors from "../artifacts/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol/SafeERC20.json";
+// console.log(Errors);
 export const errorsInterface = new ethers.Interface(Errors.abi);
 export const errorsContract = new ethers.Contract(ethers.ZeroAddress, Errors.abi);
 

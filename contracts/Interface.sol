@@ -109,3 +109,7 @@ interface IShareToken {
 interface IPoolToken {
     function balanceOfCollateral (address account) external view returns (uint256);
 }
+
+interface IPool {
+    function updatePositionForShareTransfer (address from, address to, uint256 amount) external;
+}

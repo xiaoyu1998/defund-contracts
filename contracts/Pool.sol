@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./NoDelegateCall.sol";
@@ -11,13 +12,13 @@ import "./Interface.sol";
 import "./utils/PayableMulticall.sol";
 import "./utils/WadRayMath.sol";
 import "./utils/StrictBank.sol";
+import "./utils/Printer.sol";
 
-contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
+contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
+    using SafeERC20 for IERC20;
     using WadRayMath for uint256;
     address public immutable factory;
-    address public immutable owner;
-    uint24 public immutable fee;
-    uint24 public immutable healthThrehold;
+    address public immutable fundManager;
     address public immutable shareToken;
 
     address public immutable router;
@@ -33,14 +34,19 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     mapping(address => Position) public Positions;//TODO:should update after transfer
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
+    modifier onlyFundManager() {
+        require(msg.sender == fundManager);
+        _;
+    }
+
+    modifier onlyShareToken() {
+        require(msg.sender == shareToken);
         _;
     }
 
     constructor(
         address _factory,
-        address _owner,
+        address _fundManager,
         address _shareToken,
         address _dataStore,
         address _reader,
@@ -51,7 +57,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         address _fundStrategy   
     ) {
         factory = _factory; 
-        owner = _owner; 
+        fundManager = _fundManager; 
         shareToken = _shareToken; 
         dataStore = _dataStore;
         reader = _reader;
@@ -62,7 +68,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
         fundStrategy = _fundStrategy;
     }
 
-    function updatePositionForShareTransfer(address from, address to, uint256 amount) internal {
+    function updatePositionForShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
         Position memory positionFrom = Positions[from];
         if(positionFrom.entryPrice == 0){
             revert Errors.EmptyShares(from);
@@ -108,8 +114,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
     function invest() external {
         //deposit in uf
         uint256 depositAmount = recordTransferIn(underlyingAssetUsd);
+        require(false, toString(reader));
         address poolToken = IReader(reader).getPoolToken(dataStore, underlyingAssetUsd);
-
         uint256 firstSubscriptionFee = IFundStrategy(fundStrategy).firstSubscriptionFee(depositAmount);
         unclaimFee += firstSubscriptionFee;
         totalFundFee += firstSubscriptionFee;
@@ -190,7 +196,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
     //fund manager
     function deposit(
         DepositParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         _deposit(params);
     }
 
@@ -202,7 +208,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function borrow(
         BorrowParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         GetLiquidationHealthFactor memory factor
             = IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
         uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
@@ -214,13 +220,13 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function repay(
         RepayParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         IExchangeRouter(exchangeRouter).executeRepay(params);
     }
 
     function redeem(
         RedeemParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         //IExchangeRouter(exchangeRouter).executeRedeem(params);
         _redeem(params);
     }
@@ -233,20 +239,25 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank {
 
     function swap(
         SwapParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         IExchangeRouter(exchangeRouter).executeSwap(params);
     }
 
     function closePosition(
         ClosePositionParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         IExchangeRouter(exchangeRouter).executeClosePosition(params);
     }
 
     function close(
         CloseParams calldata params
-    ) external onlyOwner {
+    ) external onlyFundManager {
         IExchangeRouter(exchangeRouter).executeClose(params);
+    }
+
+    function sendTokens(address token, address receiver, uint256 amount) external payable {
+        address account = msg.sender;
+        IERC20(token).safeTransferFrom(account, receiver, amount);
     }
 
 }
