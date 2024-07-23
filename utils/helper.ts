@@ -55,21 +55,19 @@ export function setContractAddress(name, address){
     fs.writeFileSync(jsonFile, JSON.stringify(addresses, null , 2), 'utf8');   
 }
 
-export const assetAddresses = {
-    localhost : "deployments/localhost_underlyingasset_addresses.json",
-    localnet : "deployments/localnet_underlyingasset_addresses.json",
-    testnet : "deployments/testnet_underlyingasset_addresses.json",
-    sepolia : "deployments/sepolia_underlyingasset_addresses.json",    
+export const tokenAddresses = {
+    localhost : "deployments/localhost_token_addresses.json",
+    localnet : "deployments/localnet_token_addresses.json",   
 };
 
 export function getToken(name) {
     if (!process.env.HARDHAT_NETWORK){
         process.env.HARDHAT_NETWORK = 'localhost';
     }
-    const assetAddressFile = path.join(__dirname, '..', assetAddresses[`${process.env.HARDHAT_NETWORK}`]);
+    const tokenAddressFile = path.join(__dirname, '..', tokenAddresses[`${process.env.HARDHAT_NETWORK}`]);
 
-    if (fs.existsSync(assetAddressFile)) {
-        return JSON.parse(fs.readFileSync(assetAddressFile))[name];
+    if (fs.existsSync(tokenAddressFile)) {
+        return JSON.parse(fs.readFileSync(tokenAddressFile))[name];
     }
     return {}[name];
 }

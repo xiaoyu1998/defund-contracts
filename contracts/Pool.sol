@@ -113,13 +113,17 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
     //user 
     function invest() external {
         //deposit in uf
+        log("-----------------------------invest-----------------------------");
         uint256 depositAmount = recordTransferIn(underlyingAssetUsd);
-        require(false, toString(reader));
         address poolToken = IReader(reader).getPoolToken(dataStore, underlyingAssetUsd);
         uint256 firstSubscriptionFee = IFundStrategy(fundStrategy).firstSubscriptionFee(depositAmount);
         unclaimFee += firstSubscriptionFee;
         totalFundFee += firstSubscriptionFee;
         depositAmount -= firstSubscriptionFee;
+
+        log("unclaimFee", unclaimFee);
+        log("totalFundFee", totalFundFee);
+        log("depositAmount", depositAmount);
 
         uint256 sharesToMint;
         uint256 sharePrice;
@@ -133,6 +137,9 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
             sharePrice = netCollateralUsd.rayDiv(totalShares);
         }
+
+        log("sharesToMint", sharesToMint);
+        log("sharePrice", sharePrice);        
         updatePosition(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 

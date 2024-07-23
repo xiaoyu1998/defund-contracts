@@ -4,7 +4,7 @@ async function main() {
     const [owner, user] = await ethers.getSigners();
 
     const poolAddress = getContractAddress("Pool");
-    const pool = await contractAt("Pool", poolAddress);
+    const pool = await contractAt("Pool", poolAddress, owner);
  
     const usdtAddress = getToken("USDT")["address"];   
     const usdtDecimals = getToken("USDT")["decimals"];
@@ -22,11 +22,13 @@ async function main() {
         pool.multicall(multicallArgs),
         "pool.multicall"
     );
+    //await pool.sendTokens(usdtAddress, poolAddress, investAmountUsdt);
 
     const shareTokenAddress = await pool.shareToken();
+    console.log("shareTokenAddress", shareTokenAddress);
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
-    console.log("shareToken", shareToken.balanceOf(owner.target));
-    console.log("position", await pool.Positions(owner.target));
+    console.log("shareToken", await shareToken.balanceOf(owner.address));
+    console.log("position", await pool.Positions(owner.address));
 }
 
 main()
