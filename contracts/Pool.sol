@@ -112,7 +112,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
         uint256 priceTokenUsd = IReader(reader).getPrice(dataStore, tokenUsd);
         uint256 netCollateralTokenUsdInRay = netCollateralUsdInRay.rayDiv(priceTokenUsd);
         uint256 netCollateralUsd = Math.mulDiv(netCollateralTokenUsdInRay, 10**decimalsUsd, WadRayMath.RAY);
-        uint256 adjustNetCollateralUsd = netCollateralUsd.percentMul(averageSlippage);
+        uint256 adjustNetCollateralUsd = netCollateralUsd.percentMul(10000 - averageSlippage);
         uint256 totalShares = IShareToken(shareToken).totalSupply();
 
         return (adjustNetCollateralUsd, totalShares);

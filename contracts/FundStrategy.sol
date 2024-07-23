@@ -56,7 +56,7 @@ contract FundStrategy is IFundStrategy {
     ) public view  override returns (uint256) {
 
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-        if (sharePrice - entryPrice > redemptionFeeThreshold){
+        if (int256(sharePrice) - int256(entryPrice) > int256(redemptionFeeThreshold)){
             return amount.percentMul(redemptionFeeRate);
         }else{
             return 0;
