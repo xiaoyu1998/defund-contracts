@@ -234,7 +234,6 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
     function redeem(
         RedeemParams calldata params
     ) external onlyFundManager {
-        //IExchangeRouter(exchangeRouter).executeRedeem(params);
         _redeem(params);
     }
 

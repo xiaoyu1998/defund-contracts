@@ -22,8 +22,6 @@ async function main() {
         pool.multicall(multicallArgs),
         "pool.multicall"
     );
-    //await pool.sendTokens(usdtAddress, poolAddress, investAmountUsdt);
-
     const shareTokenAddress = await pool.shareToken();
     console.log("shareTokenAddress", shareTokenAddress);
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
