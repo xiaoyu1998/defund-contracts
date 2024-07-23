@@ -25,8 +25,9 @@ contract Factory is NoDelegateCall {
     address public immutable reader;
     address public immutable router;
     address public immutable exchangeRouter;
-    address public immutable underlyAssetUsd;
+    address public immutable tokenUsd;
     uint256 public immutable decimalsUsd;
+    uint256 public immutable averageSlippage;
 
     mapping(address => mapping(address => address)) public getPool;
 
@@ -35,16 +36,18 @@ contract Factory is NoDelegateCall {
         address _reader,
         address _router, 
         address _exchangeRouter, 
-        address _underlyAssetUsd,
-        uint256 _decimalsUsd        
+        address _tokenUsd,
+        uint256 _decimalsUsd,     
+        uint256 _averageSlippage 
     ) {
         owner = msg.sender;
         dataStore = _dataStore;
         reader = _reader;
         router = _router;
         exchangeRouter = _exchangeRouter;
-        underlyAssetUsd = _underlyAssetUsd; 
-        decimalsUsd = _decimalsUsd;       
+        tokenUsd = _tokenUsd; 
+        decimalsUsd = _decimalsUsd; 
+        averageSlippage = _averageSlippage;    
         emit OwnerChanged(address(0), msg.sender);
     }
 
@@ -62,8 +65,9 @@ contract Factory is NoDelegateCall {
             reader,
             router,
             exchangeRouter,
-            underlyAssetUsd,
+            tokenUsd,
             decimalsUsd,
+            averageSlippage,
             fundStrategy
         );
         shareToken.transferOwnership(address(pool));

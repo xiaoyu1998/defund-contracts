@@ -1,3 +1,4 @@
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { sendTxn, getContractAddress, getToken, expandDecimals, contractAt} from "../utils/helper";
 
 async function main() {
@@ -10,13 +11,17 @@ async function main() {
     const usdtDecimals = getToken("USDT")["decimals"];
     const usdt = await contractAt("MintableToken", usdtAddress);
 
-    const balanceBeforeWithdraw = usdt.balanceOf(user.address);
+    const balanceBeforeWithdraw = await usdt.balanceOf(user.address);
     const shareTokenAddress = await pool.shareToken();
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
     const shares = await shareToken.balanceOf(owner.address);
+
+    //close subscription
+    const SubscriptionPeriodInSeconds = BigInt(24 * 60 * 60);
+    await time.increase(SubscriptionPeriodInSeconds);
     await pool.withdraw(shares, user.address);
-    const balanceAfterWithdraw = usdt.balanceOf(user.address);
-    
+    const balanceAfterWithdraw = await usdt.balanceOf(user.address);
+
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
     console.log("position", await pool.Positions(owner.address));

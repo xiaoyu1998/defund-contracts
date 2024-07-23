@@ -97,6 +97,11 @@ interface IReader {
         address dataStore, 
         address underlyingAsset
     ) external view returns (address);
+
+    function getPrice(
+        address dataStore, 
+        address underlyingAsset
+    ) external view returns (uint256);
 }
 
 interface IShareToken {

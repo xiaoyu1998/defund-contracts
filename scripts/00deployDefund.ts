@@ -9,12 +9,13 @@ async function main() {
     const exchangeRouter = getContractAddress("ExchangeRouter");
     const usdt = getToken("USDT")["address"];
     const usdtDecimals = getToken("USDT")["decimals"];
+    const averageSlippage = 50 //5/1000;
 
 
     const fundStrategy = await deployContract("FundStrategy", [
       expandDecimals(300, 25), //300%
-        24*60*60, //a day
-        100, //5/1000
+        24*60*60, //60 secs
+        100, //1/100
         expandDecimals(200, 25), //200%
         expandDecimals(20, 25)//20%
     ]);
@@ -26,7 +27,8 @@ async function main() {
         router,
         exchangeRouter, 
         usdt, 
-        usdtDecimals
+        usdtDecimals,
+        averageSlippage
     ]);
 
     await sendTxn(
