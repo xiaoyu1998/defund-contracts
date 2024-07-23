@@ -87,11 +87,45 @@ struct GetLiquidationHealthFactor {
     uint256 userTotalDebtUsd;
 }
 
+struct GetMarginAndSupply {
+    address underlyingAsset;
+    address account;
+    uint256 balanceAsset;
+    uint256 debt; 
+    uint256 borrowApy;
+    uint256 maxWithdrawAmount;
+    uint256 balanceSupply;
+    uint256 supplyApy;
+}
+
+struct GetPositionInfo {
+    address account;
+    address underlyingAsset;
+    uint256 positionType;
+    int256 equity;
+    int256 equityUsd;
+    uint256 indexPrice;
+    uint256 entryPrice;
+    int256 pnlUsd; 
+    uint256 liquidationPrice;
+    uint256 presentageToLiquidationPrice;
+}
+
 interface IReader { 
     function getLiquidationHealthFactor(
         address dataStore, 
         address account
     ) external view returns (GetLiquidationHealthFactor memory);
+
+    function getPositionsInfo(
+        address dataStore, 
+        address account
+    ) external view returns (GetPositionInfo[] memory);
+
+    function getMarginsAndSupplies(
+        address dataStore, 
+        address account
+    ) external view returns (GetMarginAndSupply[] memory);
 
     function getPoolToken(
         address dataStore, 
