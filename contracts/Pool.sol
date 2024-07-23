@@ -150,6 +150,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Printer {
     }
 
     function withdraw(uint256 shareAmount, address to) external {
+        log("-----------------------------withdraw-----------------------------");
         //validate pending
         if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
             revert Errors.SubscriptionPeriodCanNotWithdraw();
