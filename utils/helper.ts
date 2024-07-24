@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import parse from 'csv-parse';
-import { GetMarginAndSupplyStructOutput, GetPositionInfoStructOutput } from "../typechain-types/contracts";
+import { AssetStructOutput, PositionStructOutput } from "../typechain-types/contracts";
 
 export async function sendTxn(txnPromise, label) {
     const txn = await txnPromise
@@ -75,8 +75,8 @@ export function expandDecimals(n, decimals) {
     return BigInt(n)*(BigInt(10)**BigInt(decimals));
 }
 
-export function parseMarginAndSupply(s) {
-    const m: GetMarginAndSupplyStructOutput = {
+export function parseAsset(s) {
+    const m: AssetStructOutput = {
         underlyingAsset: s[0],
         account: s[1],
         balanceAsset: s[2],
@@ -89,17 +89,17 @@ export function parseMarginAndSupply(s) {
     return m;
 }
 
-export async function getMarginsAndSupplies(pool) {
-    const s = await pool.getMarginsAndSupplies();
+export async function getAssets(pool) {
+    const s = await pool.getAssets();
     const accountMarginsAndSupplies = [];
     for (let i = 0; i < s.length; i++) {
-         accountMarginsAndSupplies[i] = parseMarginAndSupply(s[i]);
+         accountMarginsAndSupplies[i] = parseAsset(s[i]);
     }
     return accountMarginsAndSupplies;    
 }
 
-export function parsePositionInfo(position) {
-    const p: GetPositionInfoStructOutput = {
+export function parsePosition(position) {
+    const p: PositionStructOutput = {
         account: position[0],
         underlyingAsset: position[1],
         positionType: position[2],
@@ -114,11 +114,11 @@ export function parsePositionInfo(position) {
     return p;
 }
 
-export async function getPositionsInfo(pool) {
-    const positions = await pool.getPositionsInfo();
+export async function getPositions(pool) {
+    const positions = await pool.getPositions();
     let ps = [];
     for (let i = 0; i < positions.length; i++) {
-         ps[i] = parsePositionInfo(positions[i]);
+         ps[i] = parsePosition(positions[i]);
     }
     return ps;
 }

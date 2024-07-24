@@ -22,11 +22,11 @@ contract Reader {
         return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
     }
 
-    function getPositionsInfo() external view returns (GetPositionInfo[] memory) {
+    function getPositions() external view returns (Position[] memory) {
         return IReader(reader).getPositionsInfo(dataStore, address(this));
     }
 
-    function getMarginsAndSupplies() external view returns (GetMarginAndSupply[] memory) {
+    function getAssets() external view returns (Asset[] memory) {
         return IReader(reader).getMarginsAndSupplies(dataStore, address(this));
     }
 

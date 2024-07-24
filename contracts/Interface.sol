@@ -74,11 +74,6 @@ interface IExchangeRouter {
     
 }
 
-struct Position {
-    uint256 entryPrice;
-    uint256 accAmount;
-}
-
 struct GetLiquidationHealthFactor {
     uint256 healthFactor;
     uint256 healthFactorLiquidationThreshold;
@@ -87,7 +82,7 @@ struct GetLiquidationHealthFactor {
     uint256 userTotalDebtUsd;
 }
 
-struct GetMarginAndSupply {
+struct Asset {
     address underlyingAsset;
     address account;
     uint256 balanceAsset;
@@ -98,7 +93,7 @@ struct GetMarginAndSupply {
     uint256 supplyApy;
 }
 
-struct GetPositionInfo {
+struct Position {
     address account;
     address underlyingAsset;
     uint256 positionType;
@@ -120,12 +115,12 @@ interface IReader {
     function getPositionsInfo(
         address dataStore, 
         address account
-    ) external view returns (GetPositionInfo[] memory);
+    ) external view returns (Position[] memory);
 
     function getMarginsAndSupplies(
         address dataStore, 
         address account
-    ) external view returns (GetMarginAndSupply[] memory);
+    ) external view returns (Asset[] memory);
 
     function getPoolToken(
         address dataStore, 

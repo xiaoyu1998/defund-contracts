@@ -46,6 +46,6 @@
   "CloseHandler#CloseHandler": "0x5eb3Bc0a489C5A8288765d2336659EbCA68FCd00",
   "ExchangeRouter#ExchangeRouter": "0x7bc06c482DEAd17c0e297aFbC32f6e63d3846650",
   "UniswapV3Factory#UniswapV3Factory": "0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2",
-  "DefundFactory#DefundFactory": "0xffa7CA1AEEEbBc30C874d32C7e22F052BbEa0429",
-  "Pool#Pool": "0xe4ADd454B03181eCA697Cc8E3DfC818B03797d55"
+  "DefundFactory#DefundFactory": "0x8A93d247134d91e0de6f96547cB0204e5BE8e5D8",
+  "Pool#Pool": "0x8a0a566c7b204Ec6b03fa94CeC1B583129e1A12D"
 }

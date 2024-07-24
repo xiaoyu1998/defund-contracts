@@ -5,8 +5,8 @@ import {
   getToken, 
   expandDecimals, 
   contractAt,
-  getMarginsAndSupplies,
-  getPositionsInfo
+  getAssets,
+  getPositions
 } from "../utils/helper";
 
 async function main() {
@@ -33,8 +33,8 @@ async function main() {
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
     console.log("entryPrice", await pool.entryPrices(owner.address));
-    console.log("assets", await getMarginsAndSupplies(pool));
-    console.log("positionInfo", await getPositionsInfo(pool));
+    console.log("assets", await getAssets(pool));
+    console.log("positionInfo", await getPositions(pool));
 }
 
 main()
