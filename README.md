@@ -1,13 +1,30 @@
-# Sample Hardhat Project
+# Defund Contracts
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+Users can deposit fund to a pool, And fund manager can have strategies to long and short to make profit from help management this pool.
 
-Try running some of the following tasks:
+User can withdraw fund from a pool, Do Not need to get approval from the fund manager.
+
+
+# Usage
+#### Download and installation
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
+git clone git@github.com:xiaoyu1998/df-contracts.git --recursive
+cd df-contracts
+npm install
+```
+#### start hardhat node
+```shell
 npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+```
+#### install up-contracts and copy addresses from up-contracts
+```
+cp deployed_addresses.json  /to/path/df-contracts/deployments/localhost_deployed_addresses.json
+cp token_addresses.json  /to/path//df-contracts/deployments/localhost_token_addresses.json
+```
+#### deploy defund and run scripts
+```shell
+npx hardhat run scripts/00deployDefund.ts --network localhost
+npx hardhat run scripts/01invest.ts --network localhost
+npx hardhat run scripts/02withdraw.ts --network localhost
 ```
