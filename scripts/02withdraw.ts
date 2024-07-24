@@ -1,5 +1,13 @@
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { sendTxn, getContractAddress, getToken, expandDecimals, contractAt} from "../utils/helper";
+import { 
+  sendTxn, 
+  getContractAddress, 
+  getToken, 
+  expandDecimals, 
+  contractAt,
+  getMarginsAndSupplies,
+  getPositionsInfo
+} from "../utils/helper";
 
 async function main() {
     const [owner, user] = await ethers.getSigners();
@@ -24,9 +32,9 @@ async function main() {
 
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
-    console.log("position", await pool.entryPrices(owner.address));
-    console.log("assets", await pool.getMarginsAndSupplies());
-    console.log("positionInfo", await pool.getPositionsInfo());
+    console.log("entryPrice", await pool.entryPrices(owner.address));
+    console.log("assets", await getMarginsAndSupplies(pool));
+    console.log("positionInfo", await getPositionsInfo(pool));
 }
 
 main()

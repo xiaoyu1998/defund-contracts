@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import parse from 'csv-parse';
+import { GetMarginAndSupplyStructOutput, GetPositionInfoStructOutput } from "../typechain-types/contracts";
 
 export async function sendTxn(txnPromise, label) {
     const txn = await txnPromise
@@ -35,11 +36,9 @@ export const deployAddresses = {
 };
 
 export function getContractAddress(name){
-    //console.log("network", process.env.HARDHAT_NETWORK);
     if (!process.env.HARDHAT_NETWORK){
         process.env.HARDHAT_NETWORK = 'localhost';
     }
-    //console.log("network", process.env.HARDHAT_NETWORK);
     const jsonFile = path.join(__dirname, '..', deployAddresses[`${process.env.HARDHAT_NETWORK}`]);
     const json = JSON.parse(fs.readFileSync(jsonFile, 'utf8'))
     return json[`${name}#${name}`];    
@@ -74,4 +73,52 @@ export function getToken(name) {
 
 export function expandDecimals(n, decimals) {
     return BigInt(n)*(BigInt(10)**BigInt(decimals));
+}
+
+export function parseMarginAndSupply(s) {
+    const m: GetMarginAndSupplyStructOutput = {
+        underlyingAsset: s[0],
+        account: s[1],
+        balanceAsset: s[2],
+        debt: s[3],
+        borrowApy: s[4],
+        maxWithdrawAmount: s[5],
+        balanceSupply: s[6],
+        supplyApy: s[7]
+    };
+    return m;
+}
+
+export async function getMarginsAndSupplies(pool) {
+    const s = await pool.getMarginsAndSupplies();
+    const accountMarginsAndSupplies = [];
+    for (let i = 0; i < s.length; i++) {
+         accountMarginsAndSupplies[i] = parseMarginAndSupply(s[i]);
+    }
+    return accountMarginsAndSupplies;    
+}
+
+export function parsePositionInfo(position) {
+    const p: GetPositionInfoStructOutput = {
+        account: position[0],
+        underlyingAsset: position[1],
+        positionType: position[2],
+        equity: position[3],
+        equityUsd: position[4],
+        indexPrice: position[5],
+        entryPrice: position[6],
+        pnlUsd: position[7],
+        liquidationPrice: position[8],
+        presentageToLiquidationPrice: position[9],
+    };
+    return p;
+}
+
+export async function getPositionsInfo(pool) {
+    const positions = await pool.getPositionsInfo();
+    let ps = [];
+    for (let i = 0; i < positions.length; i++) {
+         ps[i] = parsePositionInfo(positions[i]);
+    }
+    return ps;
 }
