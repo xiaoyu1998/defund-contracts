@@ -31,7 +31,6 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     uint256 internal unclaimFee;
     uint256 internal totalFundFee;
 
-    //mapping(address => Position) public Positions;//TODO:should update after transfer
     mapping(address => uint256) public entryPrices;//TODO:should update after transfer
 
     modifier onlyShareToken() {
@@ -106,8 +105,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
 
     //user 
     function invest() external {
-        //deposit in uf
         log("-----------------------------invest-----------------------------");
+        //charge fee
         uint256 depositAmount = recordTransferIn(tokenUsd);
         address poolToken = _getPoolToken(tokenUsd);
         uint256 firstSubscriptionFee = IFundStrategy(fundStrategy).firstSubscriptionFee(depositAmount);
@@ -119,6 +118,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         log("totalFundFee", totalFundFee);
         log("depositAmount", depositAmount);
 
+        //update entryPrice and mint shares
         uint256 sharesToMint;
         uint256 sharePrice;
         if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
@@ -131,14 +131,12 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
             sharePrice = netCollateralUsd.rayDiv(totalShares);
         }
-
         log("sharesToMint", sharesToMint);
-        log("sharePrice", sharePrice);        
+        log("sharePrice", sharePrice);      
         updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
-        //IERC20(tokenUsd).approve(router, depositAmount);
-        //IExchangeRouter(exchangeRouter).sendTokens(tokenUsd, poolToken, depositAmount);
+        //deposit in up
         _sendTokens(tokenUsd, poolToken, depositAmount);
         DepositParams memory params = DepositParams(tokenUsd);
         _deposit(params);
@@ -146,9 +144,9 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
 
     function withdraw(uint256 shareAmountToWithdraw, address to) external {
         log("-----------------------------withdraw-----------------------------");
-        log("shareAmount", shareAmountToWithdraw);
-        log("to", to);
         //validate pending
+
+        //validate
         if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
             revert Errors.SubscriptionPeriodCanNotWithdraw();
         }
@@ -162,7 +160,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
             shareAmountToWithdraw = shareAmountTotal;
         }
 
-        //withdraw or redeem collateral withdraw
+        //charge fee
         (   uint256 netCollateralUsd,
             uint256 totalShares
         ) = getEquity();
@@ -187,11 +185,12 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         log("totalFundFee", totalFundFee);
         log("amountToWithdrawUsd", amountToWithdrawUsd);
 
+        //withdraw or redeem collateral withdraw
         bool pending = false;
         if (IERC20(tokenUsd).balanceOf(address(this)) >= amountToWithdrawUsd) {
             transferOut(tokenUsd, to, amountToWithdrawUsd);
         } else {
-            //redeem for withdraw
+            //redeem from up
             address poolToken = _getPoolToken(tokenUsd);
             if (IPoolToken(poolToken).balanceOfCollateral(address(this)) >= amountToWithdrawUsd) {
                 RedeemParams memory params = RedeemParams(
@@ -200,7 +199,6 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
                     address(this)
                 );
                 _redeem(params);
-                //IERC20(tokenUsd).transfer(to, amountToWithdrawUsd);
                 transferOut(tokenUsd, to, amountToWithdrawUsd);
             } else {
                 //pending for 1 day
