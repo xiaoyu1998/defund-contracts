@@ -24,7 +24,9 @@ async function main() {
 
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
-    console.log("position", await pool.Positions(owner.address));
+    console.log("position", await pool.entryPrices(owner.address));
+    console.log("assets", await pool.getMarginsAndSupplies());
+    console.log("positionInfo", await pool.getPositionsInfo());
 }
 
 main()

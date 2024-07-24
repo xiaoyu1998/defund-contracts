@@ -22,11 +22,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     using SafeERC20 for IERC20;
     using WadRayMath for uint256;
     address public immutable factory;
-    //address public immutable fundManager;
     address public immutable shareToken;
-
-    // address public immutable router;
-    // address public immutable exchangeRouter;
     address public immutable tokenUsd;
     uint256 public immutable decimalsUsd;
     uint256 public immutable averageSlippage;
@@ -35,12 +31,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     uint256 internal unclaimFee;
     uint256 internal totalFundFee;
 
-    mapping(address => Position) public Positions;//TODO:should update after transfer
-
-    // modifier onlyFundManager() {
-    //     require(msg.sender == fundManager);
-    //     _;
-    // }
+    //mapping(address => Position) public Positions;//TODO:should update after transfer
+    mapping(address => uint256) public entryPrices;//TODO:should update after transfer
 
     modifier onlyShareToken() {
         require(msg.sender == shareToken);
@@ -70,9 +62,25 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         fundStrategy = _fundStrategy;
     }
 
-    function updatePositionForShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
-        Position memory positionFrom = Positions[from];
-        if(positionFrom.entryPrice == 0){
+    function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
+        uint256 entryPrice = entryPrices[account];
+        uint256 shareAmount = IShareToken(shareToken).balanceOf(account);
+        if (shareAmount == 0){
+           entryPrice = sharePrice;
+        } else {
+            if (isInvest){
+                uint256 totalValue = entryPrice.rayMul(shareAmount) +
+                                     sharePrice.rayMul(amount);
+                entryPrice = totalValue.rayDiv(shareAmount + amount);
+            } 
+        }
+        entryPrices[account] = entryPrice;
+    }
+
+    function beforeShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
+        //Position memory positionFrom = Positions[from];
+        uint256 shareAmountFrom = IShareToken(shareToken).balanceOf(from);
+        if (shareAmountFrom == 0){
             revert Errors.EmptyShares(from);
         }
         (   uint256 netCollateralUsd,
@@ -80,29 +88,11 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         ) = getEquity();
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
 
-        updatePosition(from, sharePrice, amount, false);//withdraw
-        updatePosition(to, sharePrice, amount, true);//invest
+        updateEntryPrice(from, sharePrice, amount, false);//withdraw
+        updateEntryPrice(to, sharePrice, amount, true);//invest
     }
 
-    function updatePosition(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
-        Position memory position = Positions[account];
-        if(position.entryPrice == 0){
-           position.entryPrice = sharePrice;
-           position.accAmount = amount;
-        } else {
-            if (isInvest){
-                uint256 totalValue = position.entryPrice.rayMul(position.accAmount) +
-                                     sharePrice.rayMul(amount);
-                position.accAmount += amount;
-                position.entryPrice = totalValue.rayDiv(position.accAmount);
-            } else {
-                position.accAmount -= amount;
-            }
-        }
-        Positions[account] = position;
-    }
-
-    function getEquity() internal returns(uint256, uint256) {
+    function getEquity() internal view returns(uint256, uint256) {
         GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
         uint256 netCollateralUsdInRay = factor.userTotalCollateralUsd - factor.userTotalDebtUsd;
         uint256 priceTokenUsd = _getPrice(tokenUsd);
@@ -144,7 +134,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
 
         log("sharesToMint", sharesToMint);
         log("sharePrice", sharePrice);        
-        updatePosition(msg.sender, sharePrice, sharesToMint, true);
+        updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
         //IERC20(tokenUsd).approve(router, depositAmount);
@@ -154,18 +144,22 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         _deposit(params);
     }
 
-    function withdraw(uint256 shareAmount, address to) external {
+    function withdraw(uint256 shareAmountToWithdraw, address to) external {
         log("-----------------------------withdraw-----------------------------");
-        log("shareAmount", shareAmount);
+        log("shareAmount", shareAmountToWithdraw);
         log("to", to);
         //validate pending
         if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
             revert Errors.SubscriptionPeriodCanNotWithdraw();
         }
 
-        Position memory position = Positions[msg.sender];
-        if(position.entryPrice == 0){
+        uint256 shareAmountTotal = IShareToken(shareToken).balanceOf(msg.sender);
+        if (shareAmountTotal == 0){
             revert Errors.EmptyShares(msg.sender);
+        }
+
+        if (shareAmountToWithdraw > shareAmountTotal){
+            shareAmountToWithdraw = shareAmountTotal;
         }
 
         //withdraw or redeem collateral withdraw
@@ -174,12 +168,17 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         ) = getEquity();
         log("netCollateralUsd", netCollateralUsd);
         log("totalShares", totalShares);
-        uint256 amountToWithdrawUsd = Math.mulDiv(shareAmount, netCollateralUsd, totalShares);
+        uint256 amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, netCollateralUsd, totalShares);
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
         log("amountToWithdrawUsd", amountToWithdrawUsd);
         log("sharePrice", sharePrice);
 
-        uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(amountToWithdrawUsd, Positions[msg.sender].entryPrice, netCollateralUsd, totalShares);
+        uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(
+            amountToWithdrawUsd, 
+            entryPrices[msg.sender], 
+            netCollateralUsd, 
+            totalShares
+        );
         unclaimFee += redemptionFee;
         totalFundFee += redemptionFee;
         amountToWithdrawUsd -= redemptionFee;
@@ -194,7 +193,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         } else {
             //redeem for withdraw
             address poolToken = _getPoolToken(tokenUsd);
-            if(IPoolToken(poolToken).balanceOfCollateral(address(this)) >= amountToWithdrawUsd) {
+            if (IPoolToken(poolToken).balanceOfCollateral(address(this)) >= amountToWithdrawUsd) {
                 RedeemParams memory params = RedeemParams(
                     tokenUsd,
                     amountToWithdrawUsd,
@@ -211,8 +210,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         
         //mint share token
         if (!pending) {
-            updatePosition(msg.sender, sharePrice, shareAmount,false);
-            IShareToken(shareToken).burn(msg.sender, shareAmount);
+            updateEntryPrice(msg.sender, sharePrice, shareAmountToWithdraw, false);
+            IShareToken(shareToken).burn(msg.sender, shareAmountToWithdraw);
         }
     }
 
@@ -222,13 +221,12 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     ) external onlyFundManager {
         GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
         uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
-        if(factor.healthFactor < fundHealthThreshold) {
+        if (factor.healthFactor < fundHealthThreshold) {
             revert Errors.BelowFundHealthThrehold(factor.healthFactor, fundHealthThreshold);
         }
 
         _borrow(params);
     }
-
 
     function sendTokens(address token, address receiver, uint256 amount) external payable {
         address account = msg.sender;
