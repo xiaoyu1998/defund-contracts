@@ -1,8 +1,8 @@
 # Defund Contracts
 
-Users can deposit fund to a pool, And fund manager can have strategies to long and short to make profit from help management this pool.
+Users can deposit fund to a pool, And fund manager can have strategies to long and short assets to make profit from help manage this pool.
 
-User can withdraw fund from a pool, Do Not need to get approval from the fund manager.
+Users can withdraw fund from a pool, Do NOT need to get approval from the fund manager.
 
 
 # Usage
