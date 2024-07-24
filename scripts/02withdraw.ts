@@ -22,17 +22,17 @@ async function main() {
     const balanceBeforeWithdraw = await usdt.balanceOf(user.address);
     const shareTokenAddress = await pool.shareToken();
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
-    const shares = await shareToken.balanceOf(owner.address);
+    const sharesAmount = await shareToken.balanceOf(owner.address);
 
     //close subscription
     const SubscriptionPeriodInSeconds = BigInt(24 * 60 * 60);
     await time.increase(SubscriptionPeriodInSeconds);
-    await pool.withdraw(shares, user.address);
+    await pool.withdraw(sharesAmount, user.address);
     const balanceAfterWithdraw = await usdt.balanceOf(user.address);
 
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
-    console.log("entryPrice", await pool.entryPrices(owner.address));
+    console.log("shares", await shareToken.balanceOf(owner.address));
     console.log("assets", await getAssets(pool));
     console.log("positionInfo", await getPositions(pool));
 }

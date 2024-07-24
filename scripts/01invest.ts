@@ -33,10 +33,10 @@ async function main() {
     const shareTokenAddress = await pool.shareToken();
     console.log("shareTokenAddress", shareTokenAddress);
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
-    console.log("shareToken", await shareToken.balanceOf(owner.address));
+    console.log("shares", await shareToken.balanceOf(owner.address));
     console.log("entryPrice", await pool.entryPrices(owner.address));
     console.log("assets", await getAssets(pool));
-    console.log("positionInfo", await getPositions(pool));
+    console.log("PositionDecrease", await getPositions(pool));
 }
 
 main()
