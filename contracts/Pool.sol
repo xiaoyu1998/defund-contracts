@@ -147,15 +147,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         //validate pending
 
         //validate
-        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
-            revert Errors.SubscriptionPeriodCanNotWithdraw();
-        }
-
-        uint256 shareAmountTotal = IShareToken(shareToken).balanceOf(msg.sender);
-        if (shareAmountTotal == 0){
-            revert Errors.EmptyShares(msg.sender);
-        }
-
+        uint256 shareAmountTotal = _validateWithdraw();
         if (shareAmountToWithdraw > shareAmountTotal){
             shareAmountToWithdraw = shareAmountTotal;
         }
@@ -164,13 +156,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         (   uint256 netCollateralUsd,
             uint256 totalShares
         ) = getEquity();
-        log("netCollateralUsd", netCollateralUsd);
-        log("totalShares", totalShares);
         uint256 amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, netCollateralUsd, totalShares);
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-        log("amountToWithdrawUsd", amountToWithdrawUsd);
-        log("sharePrice", sharePrice);
-
         uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(
             amountToWithdrawUsd, 
             entryPrices[msg.sender], 
@@ -180,10 +167,6 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         unclaimFee += redemptionFee;
         totalFundFee += redemptionFee;
         amountToWithdrawUsd -= redemptionFee;
-
-        log("unclaimFee", unclaimFee);
-        log("totalFundFee", totalFundFee);
-        log("amountToWithdrawUsd", amountToWithdrawUsd);
 
         //withdraw or redeem collateral withdraw
         bool pending = false;
@@ -213,22 +196,39 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         }
     }
 
+    function _validateWithdraw() internal view returns (uint256){
+        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
+            revert Errors.SubscriptionPeriodCanNotWithdraw();
+        }
+
+        uint256 shareAmountTotal = IShareToken(shareToken).balanceOf(msg.sender);
+        if (shareAmountTotal == 0){
+            revert Errors.EmptyShares(msg.sender);
+        }  
+
+        return shareAmountTotal;
+    }
+
     //fund manager
     function borrow(
         BorrowParams calldata params
     ) external onlyFundManager {
-        GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
-        uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
-        if (factor.healthFactor < fundHealthThreshold) {
-            revert Errors.BelowFundHealthThrehold(factor.healthFactor, fundHealthThreshold);
-        }
-
+        _validateBorrow();
         _borrow(params);
     }
 
     function sendTokens(address token, address receiver, uint256 amount) external payable {
         address account = msg.sender;
         IERC20(token).safeTransferFrom(account, receiver, amount);
+    }
+
+    //validate
+    function _validateBorrow() internal view {
+        GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
+        uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
+        if (factor.healthFactor < fundHealthThreshold) {
+            revert Errors.BelowFundHealthThrehold(factor.healthFactor, fundHealthThreshold);
+        }       
     }
 
 }
