@@ -4,7 +4,7 @@ Users can deposit asset to a pool, And fund manager can have strategies to long 
 
 
 # Usage
-#### Download and installation
+#### Download And Installation
 
 ```shell
 git clone git@github.com:xiaoyu1998/df-contracts.git --recursive
