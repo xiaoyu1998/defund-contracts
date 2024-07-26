@@ -131,3 +131,18 @@ export async function getPositions(pool) {
     }
     return ps;
 }
+
+export function parseHealthFactor(h) {
+    const factor: HealthFactorStructOutput = {
+        healthFactor: h[0],
+        healthFactorLiquidationThreshold: h[1],
+        isHealthFactorHigherThanLiquidationThreshold: h[2],
+        userTotalCollateralUsd: h[3],
+        userTotalDebtUsd: h[4],
+    };
+    return factor;
+}
+export async function getHealthFactor(pool) {
+    const h = await pool.getHealthFactor();
+    return parseHealthFactor(h);
+}

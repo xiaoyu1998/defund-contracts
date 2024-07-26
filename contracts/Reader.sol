@@ -18,7 +18,11 @@ contract Reader {
         reader = _reader;
     }
 
-    function _getLiquidationHealthFactor() internal view returns (GetLiquidationHealthFactor memory) {
+    function getHealthFactor() external view returns (HealthFactor memory) {
+        return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
+    }
+
+    function _getHealthFactor() internal view returns (HealthFactor memory) {
         return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
     }
 

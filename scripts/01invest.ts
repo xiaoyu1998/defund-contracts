@@ -16,7 +16,7 @@ async function main() {
  
     const usdtAddress = getToken("USDT")["address"];   
     const usdtDecimals = getToken("USDT")["decimals"];
-    const investAmountUsdt = expandDecimals(1000000, usdtDecimals);
+    const investAmountUsdt = expandDecimals(100000, usdtDecimals);
     const usdt = await contractAt("MintableToken", usdtAddress);
     console.log("usdt", await usdt.balanceOf(owner.address));
     await sendTxn(usdt.approve(poolAddress, investAmountUsdt), `usdt.approve(${poolAddress})`)  

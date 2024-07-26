@@ -92,7 +92,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     }
 
     function getEquity() internal view returns(uint256, uint256) {
-        GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
+        HealthFactor memory factor = _getHealthFactor();
         uint256 netCollateralUsdInRay = factor.userTotalCollateralUsd - factor.userTotalDebtUsd;
         uint256 priceTokenUsd = _getPrice(tokenUsd);
         uint256 netCollateralTokenUsdInRay = netCollateralUsdInRay.rayDiv(priceTokenUsd);
@@ -227,7 +227,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         BorrowParams memory params
     ) internal view {
         log("-----------------------------_validateBorrow-----------------------------");
-        GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
+        HealthFactor memory factor = _getHealthFactor();
         console.log("healthFactor", factor.healthFactor);   
         console.log("healthFactorLiquidationThreshold", factor.healthFactorLiquidationThreshold);   
         console.log("userTotalCollateralUsd", factor.userTotalCollateralUsd);   

@@ -74,7 +74,7 @@ interface IExchangeRouter {
     
 }
 
-struct GetLiquidationHealthFactor {
+struct HealthFactor {
     uint256 healthFactor;
     uint256 healthFactorLiquidationThreshold;
     bool isHealthFactorHigherThanLiquidationThreshold;
@@ -118,7 +118,7 @@ interface IReader {
     function getLiquidationHealthFactor(
         address dataStore, 
         address account
-    ) external view returns (GetLiquidationHealthFactor memory);
+    ) external view returns (HealthFactor memory);
 
     function getPositionsInfo(
         address dataStore, 

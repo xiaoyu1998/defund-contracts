@@ -10,7 +10,8 @@ import {
     contractAt,
     getAsset,
     getAssets,
-    getPositions
+    getPositions,
+    getHealthFactor
 } from "../utils/helper";
 
 async function main() {
@@ -31,7 +32,7 @@ async function main() {
     console.log("depositAmount", depositAmount);
 
     //execute borrow uni
-    const borrowAmmount = expandDecimals(100000, uniDecimals);
+    const borrowAmmount = expandDecimals(10000, uniDecimals);
     const paramsBorrow: BorrowParamsStructOutput = {
         underlyingAsset: uniAddress,
         amount: borrowAmmount,
@@ -56,6 +57,7 @@ async function main() {
     );
 
     console.log("assets", await getAssets(pool));
+    console.log("healthFactor", await getHealthFactor(pool));
     //console.log("Positions", await getPositions(pool));
 }
 
