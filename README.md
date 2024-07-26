@@ -28,4 +28,5 @@ npx hardhat run scripts/01invest.ts --network localhost
 #### Long and Short
 ```shell
 npx hardhat run scripts/03long.ts --network localhost
+npx hardhat run scripts/04short.ts --network localhost
 ```

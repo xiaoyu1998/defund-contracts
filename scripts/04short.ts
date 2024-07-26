@@ -21,27 +21,27 @@ async function main() {
     const assetsBeforeLong = await getAssets(pool);
 
     const usdtAddress = getToken("USDT")["address"];  
-    const uniAddress = getToken("UNI")["address"];
+    const ethAddress = getToken("ETH")["address"];
     const usdt = await contractAt("MintableToken", usdtAddress); 
-    const usdtDecimals = getToken("USDT")["decimals"];
+    const ethDecimals = getToken("ETH")["decimals"];
 
     //deposit
     const usdtAsset = await getAsset(assetsBeforeLong, usdtAddress);
     const depositAmount = usdtAsset.balanceAsset;
     console.log("depositAmount", depositAmount);
 
-    //execute borrow usdt
-    const borrowAmmount = expandDecimals(1000000, usdtDecimals);
+    //execute borrow eth
+    const borrowAmmount = expandDecimals(100, ethDecimals);
     const paramsBorrow: BorrowParamsStructOutput = {
-        underlyingAsset: usdtAddress,
+        underlyingAsset: ethAddress,
         amount: borrowAmmount,
     };
 
-    //execute buy uni
+    //execute sell eth
     const paramsSwap: SwapParamsStructOutput = {
-        underlyingAssetIn: usdtAddress,
-        underlyingAssetOut: uniAddress,
-        amount: depositAmount + BigInt(borrowAmmount),
+        underlyingAssetIn: ethAddress,
+        underlyingAssetOut: usdtAddress,
+        amount: BigInt(borrowAmmount),
         sqrtPriceLimitX96: 0
     };
 
