@@ -16,7 +16,7 @@ async function main() {
  
     const usdtAddress = getToken("USDT")["address"];   
     const usdtDecimals = getToken("USDT")["decimals"];
-    const investAmountUsdt = expandDecimals(10000, usdtDecimals);
+    const investAmountUsdt = expandDecimals(1000000, usdtDecimals);
     const usdt = await contractAt("MintableToken", usdtAddress);
     console.log("usdt", await usdt.balanceOf(owner.address));
     await sendTxn(usdt.approve(poolAddress, investAmountUsdt), `usdt.approve(${poolAddress})`)  
@@ -35,8 +35,9 @@ async function main() {
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
     console.log("shares", await shareToken.balanceOf(owner.address));
     console.log("entryPrice", await pool.entryPrices(owner.address));
+    console.log("totalFundFee", await pool.totalFundFee());
     console.log("assets", await getAssets(pool));
-    console.log("PositionDecrease", await getPositions(pool));
+    //console.log("Positions", await getPositions(pool));
 }
 
 main()

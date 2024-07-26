@@ -38,4 +38,8 @@ contract Reader {
         return IReader(reader).getPrice(dataStore, token);
     }
 
+    function _getPoolPrice(address token) internal view returns (GetPoolPrice memory) {
+        return IReader(reader).getPoolPrice(dataStore, token);
+    }
+
 }

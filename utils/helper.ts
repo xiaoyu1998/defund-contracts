@@ -98,6 +98,15 @@ export async function getAssets(pool) {
     return accountMarginsAndSupplies;    
 }
 
+export async function getAsset(assets, underlyingAsset) {
+    for (let i = 0; i < assets.length; i++) {
+        console.log(assets[i].underlyingAsset);
+        if(assets[i].underlyingAsset == underlyingAsset)
+            return assets[i];
+    }  
+    return {}; 
+}
+
 export function parsePosition(position) {
     const p: PositionStructOutput = {
         account: position[0],

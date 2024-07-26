@@ -13,9 +13,9 @@ async function main() {
 
 
     const fundStrategy = await deployContract("FundStrategy", [
-      expandDecimals(300, 25), //300%
+      expandDecimals(150, 25), //3x
         24*60*60, //60 secs
-        100, //1/100
+        100, //1%
         expandDecimals(200, 25), //200%
         expandDecimals(20, 25)//20%
     ]);

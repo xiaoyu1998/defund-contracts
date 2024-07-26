@@ -28,8 +28,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     uint256 public immutable averageSlippage;
     address public immutable fundStrategy;
 
-    uint256 internal unclaimFee;
-    uint256 internal totalFundFee;
+    uint256 public unclaimFee;
+    uint256 public totalFundFee;
 
     mapping(address => uint256) public entryPrices;//TODO:should update after transfer
 
@@ -213,7 +213,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     function borrow(
         BorrowParams calldata params
     ) external onlyFundManager {
-        _validateBorrow();
+        _validateBorrow(params);
         _borrow(params);
     }
 
@@ -223,11 +223,37 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     }
 
     //validate
-    function _validateBorrow() internal view {
+    function _validateBorrow(
+        BorrowParams memory params
+    ) internal view {
+        log("-----------------------------_validateBorrow-----------------------------");
         GetLiquidationHealthFactor memory factor = _getLiquidationHealthFactor();
+        console.log("healthFactor", factor.healthFactor);   
+        console.log("healthFactorLiquidationThreshold", factor.healthFactorLiquidationThreshold);   
+        console.log("userTotalCollateralUsd", factor.userTotalCollateralUsd);   
+        console.log("userTotalDebtUsd", factor.userTotalDebtUsd);  
+
+        GetPoolPrice memory poolPrice = _getPoolPrice(params.underlyingAsset);
+        console.log("underlyingAsset", poolPrice.underlyingAsset);
+        console.log("symbol", poolPrice.symbol);
+        console.log("price", poolPrice.price);
+        console.log("decimals", poolPrice.decimals);
+        console.log("amount", params.amount);
+
+        uint256 adjustAmount = Math.mulDiv(params.amount, WadRayMath.RAY, 10**poolPrice.decimals);//align to Ray
+        console.log("adjustAmount", adjustAmount); 
+        uint256 amountUsd = poolPrice.price.rayMul(adjustAmount);
+        console.log("amountUsd", amountUsd); 
+        uint256 healthFactor = 
+            (factor.userTotalCollateralUsd + amountUsd).rayDiv(factor.userTotalDebtUsd + amountUsd);
+
+        // console.log("adjustAmount", adjustAmount);   
+        // console.log("amountUsd", amountUsd);   
+        console.log("healthFactor", healthFactor);   
+
         uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
-        if (factor.healthFactor < fundHealthThreshold) {
-            revert Errors.BelowFundHealthThrehold(factor.healthFactor, fundHealthThreshold);
+        if (healthFactor < fundHealthThreshold) {
+            revert Errors.BelowFundHealthThrehold(healthFactor, fundHealthThreshold);
         }       
     }
 

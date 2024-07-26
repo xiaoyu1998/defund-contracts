@@ -34,7 +34,7 @@ async function main() {
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
     console.log("shares", await shareToken.balanceOf(owner.address));
     console.log("assets", await getAssets(pool));
-    console.log("positionInfo", await getPositions(pool));
+    //console.log("positions", await getPositions(pool));
 }
 
 main()

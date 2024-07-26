@@ -106,6 +106,14 @@ struct Position {
     uint256 presentageToLiquidationPrice;
 }
 
+struct GetPoolPrice {
+    address underlyingAsset;
+    string symbol;
+    uint256 price;
+    uint256 decimals;
+    uint256 borrowIndex;
+}
+
 interface IReader { 
     function getLiquidationHealthFactor(
         address dataStore, 
@@ -131,6 +139,11 @@ interface IReader {
         address dataStore, 
         address underlyingAsset
     ) external view returns (uint256);
+
+    function getPoolPrice(
+        address dataStore, 
+        address underlyingAsset
+    ) external view returns (GetPoolPrice memory);
 }
 
 interface IShareToken {
