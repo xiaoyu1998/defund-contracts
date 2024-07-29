@@ -11,7 +11,6 @@ async function main() {
     const usdtDecimals = getToken("USDT")["decimals"];
     const averageSlippage = 50 //5/1000;
 
-
     const vaultStrategy = await deployContract("VaultStrategy", [
       expandDecimals(150, 25), //3x
         24*60*60, //60 secs
