@@ -12,29 +12,29 @@ import {
 async function main() {
     const [owner, user] = await ethers.getSigners();
 
-    const poolAddress = getContractAddress("Pool");
-    const pool = await contractAt("Pool", poolAddress, owner);
+    const vaultAddress = getContractAddress("Vault");
+    const vault = await contractAt("Vault", vaultAddress, owner);
  
     const usdtAddress = getToken("USDT")["address"];   
     const usdtDecimals = getToken("USDT")["decimals"];
     const usdt = await contractAt("MintableToken", usdtAddress);
 
     const balanceBeforeWithdraw = await usdt.balanceOf(user.address);
-    const shareTokenAddress = await pool.shareToken();
+    const shareTokenAddress = await vault.shareToken();
     const shareToken = await contractAt("ShareToken", shareTokenAddress);
     const sharesAmount = await shareToken.balanceOf(owner.address);
 
     //close subscription
     const SubscriptionPeriodInSeconds = BigInt(24 * 60 * 60);
     await time.increase(SubscriptionPeriodInSeconds);
-    await pool.withdraw(sharesAmount, user.address);
+    await vault.withdraw(sharesAmount, user.address);
     const balanceAfterWithdraw = await usdt.balanceOf(user.address);
 
     console.log("balanceBeforeWithdraw", balanceBeforeWithdraw);
     console.log("balanceAfterWithdraw", balanceAfterWithdraw);
     console.log("shares", await shareToken.balanceOf(owner.address));
-    console.log("assets", await getAssets(pool));
-    //console.log("positions", await getPositions(pool));
+    console.log("assets", await getAssets(vault));
+    //console.log("positions", await getPositions(vault));
 }
 
 main()

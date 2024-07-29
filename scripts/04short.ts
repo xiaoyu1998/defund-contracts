@@ -17,19 +17,14 @@ import {
 async function main() {
     const [owner, user] = await ethers.getSigners();
 
-    const poolAddress = getContractAddress("Pool");
-    const pool = await contractAt("Pool", poolAddress, owner);
-    const assetsBeforeLong = await getAssets(pool);
+    const vaultAddress = getContractAddress("Vault");
+    const vault = await contractAt("Vault", vaultAddress, owner);
+    const assetsBeforeLong = await getAssets(vault);
 
     const usdtAddress = getToken("USDT")["address"];  
     const uniAddress = getToken("UNI")["address"];
     const usdt = await contractAt("MintableToken", usdtAddress); 
     const uniDecimals = getToken("UNI")["decimals"];
-
-    //deposit
-    const usdtAsset = await getAsset(assetsBeforeLong, usdtAddress);
-    const depositAmount = usdtAsset.balanceAsset;
-    console.log("depositAmount", depositAmount);
 
     //execute borrow uni
     const borrowAmmount = expandDecimals(10000, uniDecimals);
@@ -42,23 +37,23 @@ async function main() {
     const paramsSwap: SwapParamsStructOutput = {
         underlyingAssetIn: uniAddress,
         underlyingAssetOut: usdtAddress,
-        amount: BigInt(borrowAmmount),
+        amount: borrowAmmount,
         sqrtPriceLimitX96: 0
     };
 
     const multicallArgs = [
-        pool.interface.encodeFunctionData("borrow", [paramsBorrow]),
-        pool.interface.encodeFunctionData("swap", [paramsSwap]),
+        vault.interface.encodeFunctionData("executeBorrow", [paramsBorrow]),
+        vault.interface.encodeFunctionData("executeSwap", [paramsSwap]),
     ];
 
     await sendTxn(
-        pool.multicall(multicallArgs),
-        "pool.multicall"
+        vault.multicall(multicallArgs),
+        "vault.multicall"
     );
 
-    console.log("assets", await getAssets(pool));
-    console.log("healthFactor", await getHealthFactor(pool));
-    //console.log("Positions", await getPositions(pool));
+    console.log("assets", await getAssets(vault));
+    console.log("healthFactor", await getHealthFactor(vault));
+    //console.log("Positions", await getPositions(vault));
 }
 
 main()

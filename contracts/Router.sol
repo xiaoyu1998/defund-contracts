@@ -11,77 +11,77 @@ import "./Interface.sol";
  */
 contract Router {
     using SafeERC20 for IERC20;
-    address public immutable fundManager;
+    address public immutable vaultManager;
     address public immutable exchangeRouter;
     address public immutable router;
 
-    modifier onlyFundManager() {
-        require(msg.sender == fundManager);
+    modifier onlyVaultManager() {
+        require(msg.sender == vaultManager);
         _;
     }
 
     constructor(
         address _router, 
         address _exchangeRouter, 
-        address _fundManager
+        address _vaultManager
     ){
         router = _router;
         exchangeRouter = _exchangeRouter;
-        fundManager = _fundManager;
+        vaultManager = _vaultManager;
     }
 
-   //fund manager
-    function deposit(
+   //vault manager
+    function executeDeposit(
         DepositParams calldata params
-    ) external onlyFundManager {
-        _deposit(params);
+    ) external onlyVaultManager {
+        _executeDeposit(params);
     }
 
-    function _deposit(
+    function _executeDeposit(
         DepositParams memory params
     ) internal {
         IExchangeRouter(exchangeRouter).executeDeposit(params);
     }
 
-    function _borrow(
+    function _executeBorrow(
         BorrowParams calldata params
-    ) internal onlyFundManager {
+    ) internal onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeBorrow(params);
     }
 
-    function repay(
+    function executeRepay(
         RepayParams calldata params
-    ) external onlyFundManager {
+    ) external onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeRepay(params);
     }
 
-    function redeem(
+    function executeRedeem(
         RedeemParams calldata params
-    ) external onlyFundManager {
-        _redeem(params);
+    ) external onlyVaultManager {
+        _executeRedeem(params);
     }
 
-    function _redeem(
+    function _executeRedeem(
         RedeemParams memory params
     ) internal {
         IExchangeRouter(exchangeRouter).executeRedeem(params);
     }
 
-    function swap(
+    function executeSwap(
         SwapParams calldata params
-    ) external onlyFundManager {
+    ) external onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeSwap(params);
     }
 
-    function closePosition(
+    function executeClosePosition(
         ClosePositionParams calldata params
-    ) external onlyFundManager {
+    ) external onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeClosePosition(params);
     }
 
-    function close(
+    function executeClose(
         CloseParams calldata params
-    ) external onlyFundManager {
+    ) external onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeClose(params);
     }
 

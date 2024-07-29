@@ -17,19 +17,14 @@ import {
 async function main() {
     const [owner, user] = await ethers.getSigners();
 
-    const poolAddress = getContractAddress("Pool");
-    const pool = await contractAt("Pool", poolAddress, owner);
-    const assetsBeforeLong = await getAssets(pool);
+    const vaultAddress = getContractAddress("Vault");
+    const vault = await contractAt("Vault", vaultAddress, owner);
+    const assetsBeforeLong = await getAssets(vault);
 
     const usdtAddress = getToken("USDT")["address"];  
     const uniAddress = getToken("UNI")["address"];
     const usdt = await contractAt("MintableToken", usdtAddress); 
     const usdtDecimals = getToken("USDT")["decimals"];
-
-    //deposit
-    const usdtAsset = await getAsset(assetsBeforeLong, usdtAddress);
-    const depositAmount = usdtAsset.balanceAsset;
-    console.log("depositAmount", depositAmount);
 
     //execute borrow usdt
     const borrowAmmount = expandDecimals(100000, usdtDecimals);
@@ -42,22 +37,22 @@ async function main() {
     const paramsSwap: SwapParamsStructOutput = {
         underlyingAssetIn: usdtAddress,
         underlyingAssetOut: uniAddress,
-        amount: depositAmount + BigInt(borrowAmmount),
+        amount: borrowAmmount,
         sqrtPriceLimitX96: 0
     };
 
     const multicallArgs = [
-        pool.interface.encodeFunctionData("borrow", [paramsBorrow]),
-        pool.interface.encodeFunctionData("swap", [paramsSwap]),
+        vault.interface.encodeFunctionData("executeBorrow", [paramsBorrow]),
+        vault.interface.encodeFunctionData("executeSwap", [paramsSwap]),
     ];
 
     await sendTxn(
-        pool.multicall(multicallArgs),
-        "pool.multicall"
+        vault.multicall(multicallArgs),
+        "vault.multicall"
     );
 
-    console.log("assets", await getAssets(pool));
-    console.log("healthFactor", await getHealthFactor(pool));
+    console.log("assets", await getAssets(vault));
+    console.log("healthFactor", await getHealthFactor(vault));
 }
 
 main()

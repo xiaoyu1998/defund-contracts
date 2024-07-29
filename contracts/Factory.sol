@@ -3,20 +3,20 @@ pragma solidity =0.8.24;
 
 import './NoDelegateCall.sol';
 import './ShareToken.sol';
-import './Pool.sol';
+import './Vault.sol';
 
 
 /// @title Canonical factory
-/// @notice Deploys pools and manages ownership and control over pool protocol fees
+/// @notice Deploys vaults and manages ownership and control over vault protocol fees
 contract Factory is NoDelegateCall {
     event OwnerChanged(
         address indexed oldOwner, 
         address indexed newOwner
     );
-    event PoolCreated(
+    event VaultCreated(
         address indexed owner,
-        address fundStrategy,
-        address pool
+        address vaultStrategy,
+        address vault
     );
 
     address public owner;
@@ -29,7 +29,7 @@ contract Factory is NoDelegateCall {
     uint256 public immutable decimalsUsd;
     uint256 public immutable averageSlippage;
 
-    mapping(address => mapping(address => address)) public getPool;
+    mapping(address => mapping(address => address)) public getVault;
 
     constructor(
         address _dataStore,
@@ -51,13 +51,13 @@ contract Factory is NoDelegateCall {
         emit OwnerChanged(address(0), msg.sender);
     }
 
-    function createPool(
-        address fundStrategy
+    function createVault(
+        address vaultStrategy
     ) external noDelegateCall returns (address) {
-        require(getPool[msg.sender][fundStrategy] == address(0));
+        require(getVault[msg.sender][vaultStrategy] == address(0));
 
         ShareToken shareToken = new ShareToken();
-        Pool pool = new Pool(
+        Vault vault = new Vault(
             address(this), 
             msg.sender, 
             address(shareToken),
@@ -68,13 +68,13 @@ contract Factory is NoDelegateCall {
             tokenUsd,
             decimalsUsd,
             averageSlippage,
-            fundStrategy
+            vaultStrategy
         );
-        shareToken.transferOwnership(address(pool));
-        getPool[msg.sender][fundStrategy] = address(pool);
-        emit PoolCreated(msg.sender, address(pool), fundStrategy );
+        shareToken.transferOwnership(address(vault));
+        getVault[msg.sender][vaultStrategy] = address(vault);
+        emit VaultCreated(msg.sender, address(vault), vaultStrategy );
 
-        return address(pool);
+        return address(vault);
     }
 
     function setOwner(address _owner) external {

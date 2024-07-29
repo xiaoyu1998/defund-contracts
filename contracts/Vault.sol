@@ -12,12 +12,12 @@ import "./utils/StrictBank.sol";
 import "./utils/Printer.sol";
 import "./utils/PercentageMath.sol";
 import "./NoDelegateCall.sol";
-import "./IFundStrategy.sol";
+import "./IVaultStrategy.sol";
 import "./Interface.sol";
 import "./Reader.sol";
 import "./Router.sol";
 
-contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, Printer {
+contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, Printer {
     using PercentageMath for uint256;
     using SafeERC20 for IERC20;
     using WadRayMath for uint256;
@@ -26,10 +26,10 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     address public immutable tokenUsd;
     uint256 public immutable decimalsUsd;
     uint256 public immutable averageSlippage;
-    address public immutable fundStrategy;
+    address public immutable vaultStrategy;
 
     uint256 public unclaimFee;
-    uint256 public totalFundFee;
+    uint256 public totalVaultFee;
 
     mapping(address => uint256) public entryPrices;//TODO:should update after transfer
 
@@ -40,7 +40,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
 
     constructor(
         address _factory,
-        address _fundManager,
+        address _vaultManager,
         address _shareToken,
         address _dataStore,
         address _reader,
@@ -49,8 +49,8 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         address _tokenUsd,   
         uint256 _decimalsUsd,  
         uint256 _averageSlippage, 
-        address _fundStrategy   
-    ) Router(_router, _exchangeRouter, _fundManager) 
+        address _vaultStrategy   
+    ) Router(_router, _exchangeRouter, _vaultManager) 
       Reader(_dataStore, _reader)
     {
         factory = _factory; 
@@ -58,7 +58,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         tokenUsd = _tokenUsd;
         decimalsUsd = _decimalsUsd;
         averageSlippage = _averageSlippage;
-        fundStrategy = _fundStrategy;
+        vaultStrategy = _vaultStrategy;
     }
 
     function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
@@ -103,25 +103,25 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         return (adjustNetCollateralUsd, totalShares);
     }
 
-    //user 
-    function invest() external {
-        log("-----------------------------invest-----------------------------");
+    //investor 
+    function deposit() external {
+        log("-----------------------------deposit-----------------------------");
         //charge fee
         uint256 depositAmount = recordTransferIn(tokenUsd);
         address poolToken = _getPoolToken(tokenUsd);
-        uint256 firstSubscriptionFee = IFundStrategy(fundStrategy).firstSubscriptionFee(depositAmount);
+        uint256 firstSubscriptionFee = IVaultStrategy(vaultStrategy).firstSubscriptionFee(depositAmount);
         unclaimFee += firstSubscriptionFee;
-        totalFundFee += firstSubscriptionFee;
+        totalVaultFee += firstSubscriptionFee;
         depositAmount -= firstSubscriptionFee;
 
         log("unclaimFee", unclaimFee);
-        log("totalFundFee", totalFundFee);
+        log("totalVaultFee", totalVaultFee);
         log("depositAmount", depositAmount);
 
         //update entryPrice and mint shares
         uint256 sharesToMint;
         uint256 sharePrice;
-        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
+        if (IVaultStrategy(vaultStrategy).isSubscriptionPeriod()){
             sharePrice = WadRayMath.RAY;
             sharesToMint = depositAmount ;
         } else {
@@ -139,7 +139,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         //deposit in up
         _sendTokens(tokenUsd, poolToken, depositAmount);
         DepositParams memory params = DepositParams(tokenUsd);
-        _deposit(params);
+        _executeDeposit(params);
     }
 
     function withdraw(uint256 shareAmountToWithdraw, address to) external {
@@ -158,14 +158,14 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         ) = getEquity();
         uint256 amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, netCollateralUsd, totalShares);
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-        uint256 redemptionFee = IFundStrategy(fundStrategy).redemptionFee(
+        uint256 redemptionFee = IVaultStrategy(vaultStrategy).redemptionFee(
             amountToWithdrawUsd, 
             entryPrices[msg.sender], 
             netCollateralUsd, 
             totalShares
         );
         unclaimFee += redemptionFee;
-        totalFundFee += redemptionFee;
+        totalVaultFee += redemptionFee;
         amountToWithdrawUsd -= redemptionFee;
 
         //withdraw or redeem collateral withdraw
@@ -181,7 +181,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
                     amountToWithdrawUsd,
                     address(this)
                 );
-                _redeem(params);
+                _executeRedeem(params);
                 transferOut(tokenUsd, to, amountToWithdrawUsd);
             } else {
                 //pending for 1 day
@@ -197,7 +197,7 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
     }
 
     function _validateWithdraw() internal view returns (uint256){
-        if (IFundStrategy(fundStrategy).isSubscriptionPeriod()){
+        if (IVaultStrategy(vaultStrategy).isSubscriptionPeriod()){
             revert Errors.SubscriptionPeriodCanNotWithdraw();
         }
 
@@ -209,17 +209,17 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         return shareAmountTotal;
     }
 
-    //fund manager
-    function borrow(
-        BorrowParams calldata params
-    ) external onlyFundManager {
-        _validateBorrow(params);
-        _borrow(params);
-    }
-
     function sendTokens(address token, address receiver, uint256 amount) external payable {
         address account = msg.sender;
         IERC20(token).safeTransferFrom(account, receiver, amount);
+    }
+
+    //vault manager
+    function executeBorrow(
+        BorrowParams calldata params
+    ) external onlyVaultManager {
+        _validateBorrow(params);
+        _executeBorrow(params);
     }
 
     //validate
@@ -251,9 +251,9 @@ contract Pool is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, P
         // console.log("amountUsd", amountUsd);   
         console.log("healthFactor", healthFactor);   
 
-        uint256 fundHealthThreshold = IFundStrategy(fundStrategy).healthThreshold();
-        if (healthFactor < fundHealthThreshold) {
-            revert Errors.BelowFundHealthThrehold(healthFactor, fundHealthThreshold);
+        uint256 vaultHealthThreshold = IVaultStrategy(vaultStrategy).healthThreshold();
+        if (healthFactor < vaultHealthThreshold) {
+            revert Errors.BelowVaultHealthThrehold(healthFactor, vaultHealthThreshold);
         }       
     }
 

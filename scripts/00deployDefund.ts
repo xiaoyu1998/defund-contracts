@@ -12,7 +12,7 @@ async function main() {
     const averageSlippage = 50 //5/1000;
 
 
-    const fundStrategy = await deployContract("FundStrategy", [
+    const vaultStrategy = await deployContract("VaultStrategy", [
       expandDecimals(150, 25), //3x
         24*60*60, //60 secs
         100, //1%
@@ -32,11 +32,11 @@ async function main() {
     ]);
 
     await sendTxn(
-        factory.createPool(fundStrategy),
-        `factory.createPool(${fundStrategy.target})`
+        factory.createVault(vaultStrategy),
+        `factory.createVault(${vaultStrategy.target})`
     );
-    setContractAddress("DefundFactory", factory.target);
-    setContractAddress("Pool", await factory.getPool(owner.address, fundStrategy.target));
+    setContractAddress("DevaultFactory", factory.target);
+    setContractAddress("Vault", await factory.getVault(owner.address, vaultStrategy.target));
 
 }
 

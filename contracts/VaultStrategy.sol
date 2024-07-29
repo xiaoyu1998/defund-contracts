@@ -3,10 +3,10 @@ pragma solidity ^0.8.24;
 
 import "./utils/PercentageMath.sol";
 import "./utils/WadRayMath.sol";
-import "./IFundStrategy.sol";
+import "./IVaultStrategy.sol";
 //import "../utils/Printer.sol";
 
-contract FundStrategy is IFundStrategy {
+contract VaultStrategy is IVaultStrategy {
     using PercentageMath for uint256;
     using WadRayMath for uint256;
 
@@ -32,22 +32,22 @@ contract FundStrategy is IFundStrategy {
         _healthThreshold = healthThreshold_;
     }
 
-    /// @inheritdoc IFundStrategy
+    /// @inheritdoc IVaultStrategy
     function healthThreshold() public view  override returns (uint256) {
         return _healthThreshold;
     }
 
-    /// @inheritdoc IFundStrategy
+    /// @inheritdoc IVaultStrategy
     function isSubscriptionPeriod() public view  override returns (bool) {
         return block.timestamp - startTimestamp < subscriptionPeriod;
     }
     
-    /// @inheritdoc IFundStrategy
+    /// @inheritdoc IVaultStrategy
     function firstSubscriptionFee(uint256 amount) public view  override returns (uint256) {
         return amount.percentMul(firstSubscriptionFeeRate);
     }
 
-    /// @inheritdoc IFundStrategy
+    /// @inheritdoc IVaultStrategy
     function redemptionFee(
         uint256 amount,
         uint256 entryPrice,
