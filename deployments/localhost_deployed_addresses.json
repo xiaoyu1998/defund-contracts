@@ -48,6 +48,6 @@
   "CloseHandler#CloseHandler": "0x809d550fca64d94Bd9F66E60752A544199cfAC3D",
   "ExchangeRouter#ExchangeRouter": "0xcbEAF3BDe82155F56486Fb5a1072cb8baAf547cc",
   "UniswapV3Factory#UniswapV3Factory": "0x51A1ceB83B83F1985a81C295d1fF28Afef186E02",
-  "DevaultFactory#DevaultFactory": "0x86A2EE8FAf9A840F7a2c64CA3d51209F9A02081D",
-  "Vault#Vault": "0x0bA553e6c99b9592768363F2cF77378725BBD2Ec"
+  "DevaultFactory#DevaultFactory": "0xA4899D35897033b927acFCf422bc745916139776",
+  "Vault#Vault": "0x0E469088017F89a73Ba4894E3F2fAe0aa22F3c77"
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.8.24;
 
+import './token/ShareToken.sol';
 import './NoDelegateCall.sol';
-import './ShareToken.sol';
 import './Vault.sol';
 
 

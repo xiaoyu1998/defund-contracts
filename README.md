@@ -1,6 +1,6 @@
 # Defund Contracts
 
-Non-custodial protocol, Users can deposit and withdraw assets from the pool without requiring approval from the vault manager. The vault manager will implement strategies to long and short assets, aiming to generate profits through effective pool management.
+Non-custodial protocol, Users can deposit and withdraw assets from the vault without requiring approval from the vault manager. The vault manager will implement strategies to long and short assets, aiming to generate profits through effective vault management.
 
 # Usage
 #### Download And Installation

@@ -19,7 +19,6 @@ async function main() {
         expandDecimals(20, 25)//20%
     ]);
 
-
     const factory = await deployContract("Factory", [
         dataStore, 
         reader,
@@ -36,7 +35,6 @@ async function main() {
     );
     setContractAddress("DevaultFactory", factory.target);
     setContractAddress("Vault", await factory.getVault(owner.address, vaultStrategy.target));
-
 }
 
 main()
