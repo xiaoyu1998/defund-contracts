@@ -22,7 +22,7 @@ cp token_addresses.json  /to/path//df-contracts/deployments/localhost_token_addr
 #### Deploy Defund And Run Scripts
 ```shell
 npx hardhat run scripts/00deployDefund.ts --network localhost
-npx hardhat run scripts/01invest.ts --network localhost
+npx hardhat run scripts/01deposit.ts --network localhost
 ```
 #### Long And Short
 ```shell
