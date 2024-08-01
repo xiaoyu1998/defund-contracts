@@ -32,6 +32,9 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
     uint256 public totalVaultFee;
 
     mapping(address => uint256) public entryPrices;//TODO:should update after transfer
+    mapping(address => WithdrawOrder) public orders;
+
+    uint256 internal constant ONE_DAY = 1 days;
 
     modifier onlyShareToken() {
         require(msg.sender == shareToken);
@@ -39,26 +42,16 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
     }
 
     constructor(
-        address _factory,
-        address _vaultManager,
-        address _shareToken,
-        address _dataStore,
-        address _reader,
-        address _router, 
-        address _exchangeRouter, 
-        address _tokenUsd,   
-        uint256 _decimalsUsd,  
-        uint256 _averageSlippage, 
-        address _vaultStrategy   
-    ) Router(_router, _exchangeRouter, _vaultManager) 
-      Reader(_dataStore, _reader)
+        VaultConstructor memory params
+    ) Router(params.router, params.exchangeRouter, params.vaultManager, params.managerName) 
+      Reader(params.dataStore, params.reader)
     {
-        factory = _factory; 
-        shareToken = _shareToken; 
-        tokenUsd = _tokenUsd;
-        decimalsUsd = _decimalsUsd;
-        averageSlippage = _averageSlippage;
-        vaultStrategy = _vaultStrategy;
+        factory = params.factory; 
+        shareToken = params.shareToken; 
+        tokenUsd = params.tokenUsd;
+        decimalsUsd = params.decimalsUsd;
+        averageSlippage = params.averageSlippage;
+        vaultStrategy = params.vaultStrategy;
     }
 
     function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
@@ -91,16 +84,27 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
         updateEntryPrice(to, sharePrice, amount, true);//invest
     }
 
-    function getEquity() internal view returns(uint256, uint256) {
-        HealthFactor memory factor = _getHealthFactor();
-        uint256 netCollateralUsdInRay = factor.userTotalCollateralUsd - factor.userTotalDebtUsd;
-        uint256 priceTokenUsd = _getPrice(tokenUsd);
-        uint256 netCollateralTokenUsdInRay = netCollateralUsdInRay.rayDiv(priceTokenUsd);
-        uint256 netCollateralUsd = Math.mulDiv(netCollateralTokenUsdInRay, 10**decimalsUsd, WadRayMath.RAY);
-        uint256 adjustNetCollateralUsd = netCollateralUsd.percentMul(10000 - averageSlippage);
-        uint256 totalShares = IShareToken(shareToken).totalSupply();
+    struct GetEquityLocalVars {
+        HealthFactor factor;
+        uint256 netCollateralUsdInRay;
+        uint256 priceTokenUsd;
+        uint256 netCollateralTokenUsdInRay;
+        uint256 netCollateralUsd;
+        uint256 adjustNetCollateralUsd;
+        uint256 totalShares;
+    }
 
-        return (adjustNetCollateralUsd, totalShares);
+    function getEquity() internal view returns(uint256, uint256) {
+        GetEquityLocalVars memory vars;
+        vars.factor = _getHealthFactor();
+        vars.netCollateralUsdInRay = vars.factor.userTotalCollateralUsd - vars.factor.userTotalDebtUsd;
+        vars.priceTokenUsd = _getPrice(tokenUsd);
+        vars.netCollateralTokenUsdInRay = vars.netCollateralUsdInRay.rayDiv(vars.priceTokenUsd);
+        vars.netCollateralUsd = Math.mulDiv(vars.netCollateralTokenUsdInRay, 10**decimalsUsd, WadRayMath.RAY);
+        vars.adjustNetCollateralUsd = vars.netCollateralUsd.percentMul(10000 - averageSlippage);
+        vars.totalShares = IShareToken(shareToken).totalSupply();
+
+        return (vars.adjustNetCollateralUsd, vars.totalShares);
     }
 
     //investor 
@@ -142,58 +146,85 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
         _executeDeposit(params);
     }
 
+    struct WithdrawLocalVars {
+        uint256 shareAmountTotal;
+        WithdrawOrder order;
+        uint256 netCollateralUsd;
+        uint256 totalShares;
+        uint256 amountToWithdrawUsd;
+        uint256 sharePrice;
+        uint256 redemptionFee;
+        uint256 balanceUsd;
+        uint256 deficiencyAmount;
+        address poolTokenUsd;
+        RedeemParams params ;
+    }
+
     function withdraw(uint256 shareAmountToWithdraw, address to) external {
         log("-----------------------------withdraw-----------------------------");
-        //validate pending
-
+        WithdrawLocalVars memory vars;
         //validate
-        uint256 shareAmountTotal = _validateWithdraw();
-        if (shareAmountToWithdraw > shareAmountTotal){
-            shareAmountToWithdraw = shareAmountTotal;
+        vars.shareAmountTotal = _validateWithdraw();
+        if (shareAmountToWithdraw > vars.shareAmountTotal){
+            shareAmountToWithdraw = vars.shareAmountTotal;
+        }
+
+        //update pending order
+        vars.order = orders[msg.sender];
+        if (vars.order.to != address(0) ){//update order
+            orders[msg.sender] = WithdrawOrder(
+                to,
+                shareAmountToWithdraw,
+                block.timestamp,
+                true
+            ); 
+            return;            
         }
 
         //charge fee
-        (   uint256 netCollateralUsd,
-            uint256 totalShares
+        (   vars.netCollateralUsd,
+            vars.totalShares
         ) = getEquity();
-        uint256 amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, netCollateralUsd, totalShares);
-        uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-        uint256 redemptionFee = IVaultStrategy(vaultStrategy).redemptionFee(
-            amountToWithdrawUsd, 
+        vars.amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, vars.netCollateralUsd, vars.totalShares);
+        vars.sharePrice = vars.netCollateralUsd.rayDiv(vars.totalShares);
+        vars.redemptionFee = IVaultStrategy(vaultStrategy).redemptionFee(
+            vars.amountToWithdrawUsd, 
             entryPrices[msg.sender], 
-            netCollateralUsd, 
-            totalShares
+            vars.netCollateralUsd, 
+            vars.totalShares
         );
-        unclaimFee += redemptionFee;
-        totalVaultFee += redemptionFee;
-        amountToWithdrawUsd -= redemptionFee;
+        unclaimFee += vars.redemptionFee;
+        totalVaultFee += vars.redemptionFee;
+        vars.amountToWithdrawUsd -= vars.redemptionFee;
 
         //withdraw or redeem collateral withdraw
-        bool pending = false;
-        if (IERC20(tokenUsd).balanceOf(address(this)) >= amountToWithdrawUsd) {
-            transferOut(tokenUsd, to, amountToWithdrawUsd);
-        } else {
-            //redeem from up
-            address poolToken = _getPoolToken(tokenUsd);
-            if (IPoolToken(poolToken).balanceOfCollateral(address(this)) >= amountToWithdrawUsd) {
-                RedeemParams memory params = RedeemParams(
+        vars.balanceUsd = IERC20(tokenUsd).balanceOf(address(this));
+        if (vars.balanceUsd >= vars.amountToWithdrawUsd) {
+            vars.deficiencyAmount = vars.amountToWithdrawUsd - vars.balanceUsd;
+            vars.poolTokenUsd = _getPoolToken(tokenUsd);
+            if (IPoolToken(vars.poolTokenUsd).balanceOfCollateral(address(this)) < vars.deficiencyAmount) {
+                //pending for a day
+                orders[msg.sender] = WithdrawOrder(
+                    to,
+                    vars.amountToWithdrawUsd,
+                    block.timestamp,
+                    true
+                );
+                return;
+            } else {
+                vars.params = RedeemParams(
                     tokenUsd,
-                    amountToWithdrawUsd,
+                    vars.deficiencyAmount,
                     address(this)
                 );
-                _executeRedeem(params);
-                transferOut(tokenUsd, to, amountToWithdrawUsd);
-            } else {
-                //pending for 1 day
-                pending = true;
+                _executeRedeem(vars.params);
             }
         }
         
         //mint share token
-        if (!pending) {
-            updateEntryPrice(msg.sender, sharePrice, shareAmountToWithdraw, false);
-            IShareToken(shareToken).burn(msg.sender, shareAmountToWithdraw);
-        }
+        transferOut(tokenUsd, to, vars.amountToWithdrawUsd);
+        updateEntryPrice(msg.sender, vars.sharePrice, shareAmountToWithdraw, false);
+        IShareToken(shareToken).burn(msg.sender, shareAmountToWithdraw);
     }
 
     function _validateWithdraw() internal view returns (uint256){
@@ -207,6 +238,63 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
         }  
 
         return shareAmountTotal;
+    }
+
+    struct ExecuteWithdrawOrderLocalVars {
+        WithdrawOrder order;
+        uint256 balanceUsd;
+        uint256 amountToWithdrawUsd;
+        uint256 deficiencyAmount;
+        address poolTokenUsd;
+        SwapParams swapParams;
+        RedeemParams redeemParams;
+    }
+
+    function executeWithdrawOrder(address tokenToSell) external {
+        ExecuteWithdrawOrderLocalVars memory vars;
+        vars.order = orders[msg.sender];
+        _validateExecuteWithdrawOrder(vars.order, msg.sender);
+
+        vars.balanceUsd = IERC20(tokenUsd).balanceOf(address(this));
+        vars.amountToWithdrawUsd = vars.order.amountToWithdrawUsd;
+        if (vars.balanceUsd < vars.amountToWithdrawUsd) {
+            vars.deficiencyAmount = vars.amountToWithdrawUsd - vars.balanceUsd;
+            vars.poolTokenUsd = _getPoolToken(tokenUsd);
+            if (IPoolToken(vars.poolTokenUsd).balanceOfCollateral(address(this)) < vars.deficiencyAmount) {
+                vars.swapParams = SwapParams(
+                    tokenToSell,
+                    tokenUsd,
+                    vars.deficiencyAmount,
+                    0
+                );
+                _executeSwapExactOut(vars.swapParams);
+            }
+
+            vars.redeemParams = RedeemParams(
+                tokenUsd,
+                vars.deficiencyAmount,
+                address(this)
+            );
+            _executeRedeem(vars.redeemParams);
+        }
+
+        transferOut(tokenUsd, vars.order.to, vars.amountToWithdrawUsd);
+        vars.order.isOpen = false;
+        orders[msg.sender] = vars.order;
+
+    }
+
+    function _validateExecuteWithdrawOrder(WithdrawOrder memory order, address account) internal view {
+        if (!order.isOpen){
+            revert Errors.WithdrawOrderClosed(account);
+        }
+        if (order.to == address(0) ){//update order
+            revert Errors.EmptyWithdrawOrder(account);
+        }
+
+        if (block.timestamp - order.submitTime < ONE_DAY){
+            revert Errors.LessThanOneDay();
+        }
     }
 
     function sendTokens(address token, address receiver, uint256 amount) external payable {

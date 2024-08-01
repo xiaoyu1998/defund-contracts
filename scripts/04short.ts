@@ -43,7 +43,7 @@ async function main() {
 
     const multicallArgs = [
         vault.interface.encodeFunctionData("executeBorrow", [paramsBorrow]),
-        vault.interface.encodeFunctionData("executeSwap", [paramsSwap]),
+        vault.interface.encodeFunctionData("executeSwapExactIn", [paramsSwap]),
     ];
 
     await sendTxn(

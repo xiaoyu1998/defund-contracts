@@ -64,6 +64,10 @@ interface IExchangeRouter {
         SwapParams calldata params
     ) external payable;
 
+    function executeSwapExactOut(
+        SwapParams calldata params
+    ) external payable;
+
     function executeClosePosition(
         ClosePositionParams calldata params
     ) external payable;
@@ -72,6 +76,21 @@ interface IExchangeRouter {
         CloseParams calldata params
     ) external payable;
     
+}
+
+struct VaultConstructor {
+    address factory;
+    address vaultManager;
+    string  managerName;
+    address shareToken;
+    address dataStore;
+    address reader;
+    address router; 
+    address exchangeRouter; 
+    address tokenUsd;   
+    uint256 decimalsUsd;  
+    uint256 averageSlippage; 
+    address vaultStrategy;
 }
 
 struct HealthFactor {
@@ -114,6 +133,13 @@ struct GetPoolPrice {
     uint256 borrowIndex;
 }
 
+struct WithdrawOrder {
+    address to;
+    uint256 amountToWithdrawUsd;
+    uint256 submitTime;
+    bool isOpen;
+}
+
 interface IReader { 
     function getLiquidationHealthFactor(
         address dataStore, 
@@ -152,7 +178,6 @@ interface IShareToken {
     function totalSupply() external view returns(uint256);
     function balanceOf(address account) external view returns(uint256);
 }
-
 
 interface IPoolToken {
     function balanceOfCollateral (address account) external view returns (uint256);

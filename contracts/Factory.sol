@@ -4,6 +4,7 @@ pragma solidity =0.8.24;
 import './token/ShareToken.sol';
 import './NoDelegateCall.sol';
 import './Vault.sol';
+import './Interface.sol';
 
 
 /// @title Canonical factory
@@ -20,7 +21,6 @@ contract Factory is NoDelegateCall {
     );
 
     address public owner;
-
     address public immutable dataStore;
     address public immutable reader;
     address public immutable router;
@@ -52,14 +52,18 @@ contract Factory is NoDelegateCall {
     }
 
     function createVault(
+        string memory managerName,
+        string memory vaultName,
+        string memory vaultSymbol,
         address vaultStrategy
     ) external noDelegateCall returns (address) {
         require(getVault[msg.sender][vaultStrategy] == address(0));
 
-        ShareToken shareToken = new ShareToken();
-        Vault vault = new Vault(
+        ShareToken shareToken = new ShareToken(vaultName, vaultSymbol);
+        VaultConstructor memory params = VaultConstructor(
             address(this), 
             msg.sender, 
+            managerName,
             address(shareToken),
             dataStore,
             reader,
@@ -70,6 +74,7 @@ contract Factory is NoDelegateCall {
             averageSlippage,
             vaultStrategy
         );
+        Vault vault = new Vault(params);
         shareToken.transferOwnership(address(vault));
         getVault[msg.sender][vaultStrategy] = address(vault);
         emit VaultCreated(msg.sender, address(vault), vaultStrategy );

@@ -14,6 +14,7 @@ contract Router {
     address public immutable vaultManager;
     address public immutable exchangeRouter;
     address public immutable router;
+    string public managerName;
 
     modifier onlyVaultManager() {
         require(msg.sender == vaultManager);
@@ -23,11 +24,13 @@ contract Router {
     constructor(
         address _router, 
         address _exchangeRouter, 
-        address _vaultManager
+        address _vaultManager,
+        string memory _managerName
     ){
         router = _router;
         exchangeRouter = _exchangeRouter;
         vaultManager = _vaultManager;
+        managerName = _managerName;
     }
 
    //vault manager
@@ -67,10 +70,23 @@ contract Router {
         IExchangeRouter(exchangeRouter).executeRedeem(params);
     }
 
-    function executeSwap(
+    function executeSwapExactIn(
         SwapParams calldata params
     ) external onlyVaultManager {
         IExchangeRouter(exchangeRouter).executeSwap(params);
+    }
+
+    function executeSwapExactOut(
+        SwapParams calldata params
+    ) internal {
+        //IExchangeRouter(exchangeRouter).executeSwapExactOut(params);
+        _executeSwapExactOut(params);
+    }
+
+    function _executeSwapExactOut(
+        SwapParams memory params
+    ) internal {
+        IExchangeRouter(exchangeRouter).executeSwapExactOut(params);
     }
 
     function executeClosePosition(

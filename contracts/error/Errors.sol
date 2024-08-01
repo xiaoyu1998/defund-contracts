@@ -14,4 +14,9 @@ library Errors {
     error BelowVaultHealthThrehold(uint256 healthFactor, uint256 fundHealthThreshold);
     error EmptyShares(address account);
 
+    //vault
+    error WithdrawOrderClosed(address account);
+    error EmptyWithdrawOrder(address account);
+    error LessThanOneDay();
+
 }

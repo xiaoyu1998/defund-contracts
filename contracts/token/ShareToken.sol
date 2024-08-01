@@ -10,7 +10,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract ShareToken is Ownable, ERC20 {
     uint8 private _decimals;
 
-    constructor() Ownable(msg.sender) ERC20("DF_VAULT_TOKEN", "DF_VAULT_TOKEN") {
+    constructor(        
+        string memory vaultName,
+        string memory vaultSymbol
+    ) Ownable(msg.sender) ERC20(vaultName, vaultSymbol) {
         _decimals = 0;
     }
 
