@@ -17,7 +17,7 @@ import "./Interface.sol";
 import "./Reader.sol";
 import "./Router.sol";
 
-contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, Printer {
+contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
     using PercentageMath for uint256;
     using SafeERC20 for IERC20;
     using WadRayMath for uint256;
@@ -109,7 +109,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
 
     //investor 
     function deposit() external {
-        log("-----------------------------deposit-----------------------------");
+        //Printer.log("-----------------------------deposit-----------------------------");
         //charge fee
         uint256 depositAmount = recordTransferIn(tokenUsd);
         address poolToken = _getPoolToken(tokenUsd);
@@ -118,9 +118,9 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
         totalVaultFee += firstSubscriptionFee;
         depositAmount -= firstSubscriptionFee;
 
-        log("unclaimFee", unclaimFee);
-        log("totalVaultFee", totalVaultFee);
-        log("depositAmount", depositAmount);
+        // Printer.log("unclaimFee", unclaimFee);
+        // Printer.log("totalVaultFee", totalVaultFee);
+        // Printer.log("depositAmount", depositAmount);
 
         //update entryPrice and mint shares
         uint256 sharesToMint;
@@ -135,8 +135,8 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
             sharePrice = netCollateralUsd.rayDiv(totalShares);
         }
-        log("sharesToMint", sharesToMint);
-        log("sharePrice", sharePrice);      
+        // Printer.log("sharesToMint", sharesToMint);
+        // Printer.log("sharePrice", sharePrice);      
         updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
@@ -161,7 +161,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
     }
 
     function withdraw(uint256 shareAmountToWithdraw, address to) external {
-        log("-----------------------------withdraw-----------------------------");
+        //Printer.log("-----------------------------withdraw-----------------------------");
         WithdrawLocalVars memory vars;
         //validate
         vars.shareAmountTotal = _validateWithdraw();
@@ -314,30 +314,28 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader, 
     function _validateBorrow(
         BorrowParams memory params
     ) internal view {
-        log("-----------------------------_validateBorrow-----------------------------");
+        // Printer.log("-----------------------------_validateBorrow-----------------------------");
         HealthFactor memory factor = _getHealthFactor();
-        console.log("healthFactor", factor.healthFactor);   
-        console.log("healthFactorLiquidationThreshold", factor.healthFactorLiquidationThreshold);   
-        console.log("userTotalCollateralUsd", factor.userTotalCollateralUsd);   
-        console.log("userTotalDebtUsd", factor.userTotalDebtUsd);  
+        // Printer.log("healthFactor", factor.healthFactor);   
+        // Printer.log("healthFactorLiquidationThreshold", factor.healthFactorLiquidationThreshold);   
+        // Printer.log("userTotalCollateralUsd", factor.userTotalCollateralUsd);   
+        // Printer.log("userTotalDebtUsd", factor.userTotalDebtUsd);  
 
         GetPoolPrice memory poolPrice = _getPoolPrice(params.underlyingAsset);
-        console.log("underlyingAsset", poolPrice.underlyingAsset);
-        console.log("symbol", poolPrice.symbol);
-        console.log("price", poolPrice.price);
-        console.log("decimals", poolPrice.decimals);
-        console.log("amount", params.amount);
+        // Printer.log("underlyingAsset", poolPrice.underlyingAsset);
+        // Printer.log("symbol", poolPrice.symbol);
+        // Printer.log("price", poolPrice.price);
+        // Printer.log("decimals", poolPrice.decimals);
+        // Printer.log("amount", params.amount);
 
         uint256 adjustAmount = Math.mulDiv(params.amount, WadRayMath.RAY, 10**poolPrice.decimals);//align to Ray
-        console.log("adjustAmount", adjustAmount); 
+        // Printer.log("adjustAmount", adjustAmount); 
         uint256 amountUsd = poolPrice.price.rayMul(adjustAmount);
-        console.log("amountUsd", amountUsd); 
+        // Printer.log("amountUsd", amountUsd); 
         uint256 healthFactor = 
             (factor.userTotalCollateralUsd + amountUsd).rayDiv(factor.userTotalDebtUsd + amountUsd);
-
-        // console.log("adjustAmount", adjustAmount);   
-        // console.log("amountUsd", amountUsd);   
-        console.log("healthFactor", healthFactor);   
+  
+        // Printer.log("healthFactor", healthFactor);   
 
         uint256 vaultHealthThreshold = IVaultStrategy(vaultStrategy).healthThreshold();
         if (healthFactor < vaultHealthThreshold) {

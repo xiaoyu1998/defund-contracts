@@ -30,7 +30,12 @@ async function main() {
     ]);
 
     await sendTxn(
-        factory.createVault(vaultStrategy),
+        factory.createVault(
+          "xiaoyu1998",
+          "cactus",
+          "CAC",
+          vaultStrategy
+        ),
         `factory.createVault(${vaultStrategy.target})`
     );
     setContractAddress("DevaultFactory", factory.target);

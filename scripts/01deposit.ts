@@ -19,7 +19,10 @@ async function main() {
     const depositAmountUsdt = expandDecimals(100000, usdtDecimals);
     const usdt = await contractAt("MintableToken", usdtAddress);
     console.log("usdt", await usdt.balanceOf(owner.address));
-    await sendTxn(usdt.approve(vaultAddress, depositAmountUsdt), `usdt.approve(${vaultAddress})`)  
+    await sendTxn(
+        usdt.approve(vaultAddress, depositAmountUsdt), 
+        `usdt.approve(${vaultAddress})`
+    )  
 
     const multicallArgs = [
         vault.interface.encodeFunctionData("sendTokens", [usdtAddress, vaultAddress, depositAmountUsdt]),

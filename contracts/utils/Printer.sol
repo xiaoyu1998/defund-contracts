@@ -9,7 +9,7 @@ import "hardhat/console.sol";
  * @title Printer
  * @dev Library for console functions
  */
-contract Printer {
+library Printer {
     using SafeCast for int256;
     bool internal constant disablePrinter = false;
 
