@@ -54,13 +54,13 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         vaultStrategy = params.vaultStrategy;
     }
 
-    function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isInvest) internal {
+    function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isAdded) internal {
         uint256 entryPrice = entryPrices[account];
         uint256 shareAmount = IShareToken(shareToken).balanceOf(account);
         if (shareAmount == 0){
            entryPrice = sharePrice;
         } else {
-            if (isInvest){
+            if (isAdded){
                 uint256 totalValue = entryPrice.rayMul(shareAmount) +
                                      sharePrice.rayMul(amount);
                 entryPrice = totalValue.rayDiv(shareAmount + amount);
@@ -69,19 +69,58 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         entryPrices[account] = entryPrice;
     }
 
+    // function beforeShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
+    //     (   uint256 netCollateralUsd,
+    //         uint256 totalShares
+    //     ) = getEquity();
+    //     uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
+
+    //     if (from == address(0)){//mint
+    //         updateEntryPrice(to, sharePrice, amount, true);
+    //         return;
+    //     }
+
+    //     if (to == address(0)){//burn
+    //         updateEntryPrice(from, sharePrice, amount, false);//withdraw
+    //         return;
+    //     }
+
+    //     //transfer
+    //     uint256 shareBalance = IShareToken(shareToken).balanceOf(from);
+    //     if (shareBalance == 0){
+    //         revert Errors.EmptyShares(from);
+    //     }
+
+    //     if (shareBalance < amount){
+    //         revert Errors.TransferAmountExeceedsBalance(from, shareBalance, amount);
+    //     }
+        
+    //     updateEntryPrice(to, sharePrice, amount, true);//deposit
+    //     updateEntryPrice(from, sharePrice, amount, false);//withdraw
+    // }
+
     function beforeShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
-        //Position memory positionFrom = Positions[from];
-        uint256 shareAmountFrom = IShareToken(shareToken).balanceOf(from);
-        if (shareAmountFrom == 0){
-            revert Errors.EmptyShares(from);
+        //mint & burn
+        if (from == address(0) || to == address(0)){
+            return;
         }
+
+        //transfer
         (   uint256 netCollateralUsd,
             uint256 totalShares
         ) = getEquity();
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
+        uint256 shareBalance = IShareToken(shareToken).balanceOf(from);
+        if (shareBalance == 0){
+            revert Errors.EmptyShares(from);
+        }
 
-        updateEntryPrice(from, sharePrice, amount, false);//withdraw
-        updateEntryPrice(to, sharePrice, amount, true);//invest
+        if (shareBalance < amount){
+            revert Errors.TransferAmountExeceedsBalance(from, shareBalance, amount);
+        }
+        
+        updateEntryPrice(to, sharePrice, amount, true);//add
+        updateEntryPrice(from, sharePrice, amount, false);//remove
     }
 
     struct GetEquityLocalVars {
@@ -109,7 +148,6 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
 
     //investor 
     function deposit() external {
-        //Printer.log("-----------------------------deposit-----------------------------");
         //charge fee
         uint256 depositAmount = recordTransferIn(tokenUsd);
         address poolToken = _getPoolToken(tokenUsd);
@@ -117,10 +155,6 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         unclaimFee += firstSubscriptionFee;
         totalVaultFee += firstSubscriptionFee;
         depositAmount -= firstSubscriptionFee;
-
-        // Printer.log("unclaimFee", unclaimFee);
-        // Printer.log("totalVaultFee", totalVaultFee);
-        // Printer.log("depositAmount", depositAmount);
 
         //update entryPrice and mint shares
         uint256 sharesToMint;
@@ -134,13 +168,11 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
             ) = getEquity();
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
             sharePrice = netCollateralUsd.rayDiv(totalShares);
-        }
-        // Printer.log("sharesToMint", sharesToMint);
-        // Printer.log("sharePrice", sharePrice);      
+        }    
         updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
-        //deposit in up
+        //deposit to up
         _sendTokens(tokenUsd, poolToken, depositAmount);
         DepositParams memory params = DepositParams(tokenUsd);
         _executeDeposit(params);
@@ -316,27 +348,12 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
     ) internal view {
         // Printer.log("-----------------------------_validateBorrow-----------------------------");
         HealthFactor memory factor = _getHealthFactor();
-        // Printer.log("healthFactor", factor.healthFactor);   
-        // Printer.log("healthFactorLiquidationThreshold", factor.healthFactorLiquidationThreshold);   
-        // Printer.log("userTotalCollateralUsd", factor.userTotalCollateralUsd);   
-        // Printer.log("userTotalDebtUsd", factor.userTotalDebtUsd);  
-
         GetPoolPrice memory poolPrice = _getPoolPrice(params.underlyingAsset);
-        // Printer.log("underlyingAsset", poolPrice.underlyingAsset);
-        // Printer.log("symbol", poolPrice.symbol);
-        // Printer.log("price", poolPrice.price);
-        // Printer.log("decimals", poolPrice.decimals);
-        // Printer.log("amount", params.amount);
-
         uint256 adjustAmount = Math.mulDiv(params.amount, WadRayMath.RAY, 10**poolPrice.decimals);//align to Ray
-        // Printer.log("adjustAmount", adjustAmount); 
         uint256 amountUsd = poolPrice.price.rayMul(adjustAmount);
-        // Printer.log("amountUsd", amountUsd); 
         uint256 healthFactor = 
             (factor.userTotalCollateralUsd + amountUsd).rayDiv(factor.userTotalDebtUsd + amountUsd);
-  
-        // Printer.log("healthFactor", healthFactor);   
-
+ 
         uint256 vaultHealthThreshold = IVaultStrategy(vaultStrategy).healthThreshold();
         if (healthFactor < vaultHealthThreshold) {
             revert Errors.BelowVaultHealthThrehold(healthFactor, vaultHealthThreshold);

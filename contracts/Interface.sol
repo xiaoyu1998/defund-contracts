@@ -184,5 +184,5 @@ interface IPoolToken {
 }
 
 interface IVault {
-    function updatePositionForShareTransfer (address from, address to, uint256 amount) external;
+    function beforeShareTransfer (address from, address to, uint256 amount) external;
 }

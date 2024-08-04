@@ -13,6 +13,7 @@ library Errors {
     error SubscriptionPeriodCanNotWithdraw();
     error BelowVaultHealthThrehold(uint256 healthFactor, uint256 fundHealthThreshold);
     error EmptyShares(address account);
+    error TransferAmountExeceedsBalance(address from, uint256 shareBalance, uint256 transferAmount);
 
     //vault
     error WithdrawOrderClosed(address account);
