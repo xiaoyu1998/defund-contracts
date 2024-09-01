@@ -54,7 +54,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         vaultStrategy = params.vaultStrategy;
     }
 
-    function updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isAdded) internal {
+    function _updateEntryPrice(address account, uint256 sharePrice, uint256 amount, bool isAdded) internal {
         uint256 entryPrice = entryPrices[account];
         uint256 shareAmount = IShareToken(shareToken).balanceOf(account);
         if (shareAmount == 0){
@@ -69,36 +69,6 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         entryPrices[account] = entryPrice;
     }
 
-    // function beforeShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
-    //     (   uint256 netCollateralUsd,
-    //         uint256 totalShares
-    //     ) = getEquity();
-    //     uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
-
-    //     if (from == address(0)){//mint
-    //         updateEntryPrice(to, sharePrice, amount, true);
-    //         return;
-    //     }
-
-    //     if (to == address(0)){//burn
-    //         updateEntryPrice(from, sharePrice, amount, false);//withdraw
-    //         return;
-    //     }
-
-    //     //transfer
-    //     uint256 shareBalance = IShareToken(shareToken).balanceOf(from);
-    //     if (shareBalance == 0){
-    //         revert Errors.EmptyShares(from);
-    //     }
-
-    //     if (shareBalance < amount){
-    //         revert Errors.TransferAmountExeceedsBalance(from, shareBalance, amount);
-    //     }
-        
-    //     updateEntryPrice(to, sharePrice, amount, true);//deposit
-    //     updateEntryPrice(from, sharePrice, amount, false);//withdraw
-    // }
-
     function beforeShareTransfer(address from, address to, uint256 amount) external onlyShareToken {
         //mint & burn
         if (from == address(0) || to == address(0)){
@@ -108,7 +78,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         //transfer
         (   uint256 netCollateralUsd,
             uint256 totalShares
-        ) = getEquity();
+        ) = _getEquity();
         uint256 sharePrice = netCollateralUsd.rayDiv(totalShares);
         uint256 shareBalance = IShareToken(shareToken).balanceOf(from);
         if (shareBalance == 0){
@@ -119,8 +89,8 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
             revert Errors.TransferAmountExeceedsBalance(from, shareBalance, amount);
         }
         
-        updateEntryPrice(to, sharePrice, amount, true);//add
-        updateEntryPrice(from, sharePrice, amount, false);//remove
+        _updateEntryPrice(to, sharePrice, amount, true);//add
+        _updateEntryPrice(from, sharePrice, amount, false);//remove
     }
 
     struct GetEquityLocalVars {
@@ -133,7 +103,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         uint256 totalShares;
     }
 
-    function getEquity() internal view returns(uint256, uint256) {
+    function _getEquity() internal view returns(uint256, uint256) {
         GetEquityLocalVars memory vars;
         vars.factor = _getHealthFactor();
         vars.netCollateralUsdInRay = vars.factor.userTotalCollateralUsd - vars.factor.userTotalDebtUsd;
@@ -165,11 +135,11 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         } else {
             (   uint256 netCollateralUsd,
                 uint256 totalShares
-            ) = getEquity();
+            ) = _getEquity();
             sharesToMint = Math.mulDiv(depositAmount, totalShares, netCollateralUsd); 
             sharePrice = netCollateralUsd.rayDiv(totalShares);
         }    
-        updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
+        _updateEntryPrice(msg.sender, sharePrice, sharesToMint, true);
         IShareToken(shareToken).mint(msg.sender, sharesToMint);
 
         //deposit to up
@@ -216,7 +186,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         //charge fee
         (   vars.netCollateralUsd,
             vars.totalShares
-        ) = getEquity();
+        ) = _getEquity();
         vars.amountToWithdrawUsd = Math.mulDiv(shareAmountToWithdraw, vars.netCollateralUsd, vars.totalShares);
         vars.sharePrice = vars.netCollateralUsd.rayDiv(vars.totalShares);
         vars.redemptionFee = IVaultStrategy(vaultStrategy).redemptionFee(
@@ -255,7 +225,7 @@ contract Vault is NoDelegateCall, PayableMulticall, StrictBank, Router, Reader {
         
         //mint share token
         transferOut(tokenUsd, to, vars.amountToWithdrawUsd);
-        updateEntryPrice(msg.sender, vars.sharePrice, shareAmountToWithdraw, false);
+        _updateEntryPrice(msg.sender, vars.sharePrice, shareAmountToWithdraw, false);
         IShareToken(shareToken).burn(msg.sender, shareAmountToWithdraw);
     }
 

@@ -21,17 +21,17 @@ contract Reader {
     function getHealthFactor() external view returns (HealthFactor memory) {
         return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
     }
-
-    function _getHealthFactor() internal view returns (HealthFactor memory) {
-        return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
-    }
-
+    
     function getPositions() external view returns (Position[] memory) {
         return IReader(reader).getPositionsInfo(dataStore, address(this));
     }
 
     function getAssets() external view returns (Asset[] memory) {
         return IReader(reader).getMarginsAndSupplies(dataStore, address(this));
+    }
+
+    function _getHealthFactor() internal view returns (HealthFactor memory) {
+        return IReader(reader).getLiquidationHealthFactor(dataStore, address(this));
     }
 
     function _getPoolToken(address token) internal view returns (address) {
