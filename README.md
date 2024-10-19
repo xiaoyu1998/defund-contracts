@@ -6,8 +6,8 @@ Non-custodial protocol, Users can deposit and withdraw assets from the vault wit
 #### Download And Installation
 
 ```shell
-git clone git@github.com:xiaoyu1998/df-contracts.git --recursive
-cd df-contracts
+git clone git@github.com:xiaoyu1998/defund-contracts.git --recursive
+cd defund-contracts
 npm install
 ```
 #### Start Node
